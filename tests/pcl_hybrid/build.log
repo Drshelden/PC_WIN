@@ -1,0 +1,5 @@
+Package vtk was not found in the pkg-config search path.
+Perhaps you should add the directory containing `vtk.pc'
+to the PKG_CONFIG_PATH environment variable
+Package 'vtk', required by 'virtual:world', not found
+g++ -std=c++14 -Wall -O2 -DPCL_MAJOR_VERSION=1 -DPCL_MINOR_VERSION=14 -I/usr/include/vtk-9.1 -I/usr/include/pcl-1.14 -I/usr/include/eigen3  -o main /mnt/c/_LOCAL/GitHub/PC_WIN/tests/pcl_hybrid/main.cpp -lpcl_visualization -lpcl_io -lOpenNI -lOpenNI2 -L/usr/lib/x86_64-linux-gnu/hdf5/openmpi -L/usr/lib/x86_64-linux-gnu/openmpi/lib -lpcl_segmentation -lpcl_features -lpcl_filters -lpcl_sample_consensus -lpcl_search -lpcl_kdtree -lflann -lflann_cpp -lhdf5 -lmpi -llz4 -lpcl_octree -lpcl_ml -lpcl_common  -lvtkCommonCore-9.1 -lvtkCommonMath-9.1 -lvtkCommonSystem-9.1 -lvtkCommonTransforms-9.1 -lvtkCommonDataModel-9.1 -lvtkCommonExecutionModel-9.1 -lvtkCommonMisc-9.1 -lvtkRenderingCore-9.1 -lvtkRenderingOpenGL2-9.1 -lvtkGUISupportQt-9.1

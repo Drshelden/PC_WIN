@@ -1,0 +1,44 @@
+TARGET = main
+SRC = /mnt/c/_LOCAL/GitHub/PC_WIN/tests/pcl_hybrid/main.cpp
+VTK_INCLUDE = /usr/include/vtk-9.1
+
+CXX = g++
+CXXFLAGS = -std=c++14 -Wall -O2
+
+# Don't run pkg-config for trivial goals like 'clean' to avoid noisy warnings
+ifeq ($(filter clean,$(MAKECMDGOALS)),clean)
+	PCL_CFLAGS =
+	PCL_LIBS =
+	VTK_PKG_LIBS =
+	PCL_VERSION =
+	PCL_MAJOR =
+	PCL_MINOR =
+else
+	# Query PCL flags from pkg-config (silence pkg-config errors)
+	PCL_CFLAGS := $(shell pkg-config --cflags pcl_common 2>/dev/null || true)
+	PCL_LIBS   := $(shell pkg-config --libs pcl_io pcl_common pcl_visualization pcl_features pcl_segmentation 2>/dev/null || true)
+
+	# Try to get VTK libs via pkg-config; fallback to common VTK components if pkg-config isn't available
+	VTK_PKG_LIBS := $(shell pkg-config --libs vtk 2>/dev/null || true)
+	ifeq ($(VTK_PKG_LIBS),)
+		VTK_LIBS = -lvtkCommonCore-9.1 -lvtkCommonMath-9.1 -lvtkCommonSystem-9.1 -lvtkCommonTransforms-9.1 -lvtkCommonDataModel-9.1 \
+				   -lvtkCommonExecutionModel-9.1 -lvtkCommonMisc-9.1 -lvtkRenderingCore-9.1 -lvtkRenderingOpenGL2-9.1 -lvtkGUISupportQt-9.1
+	else
+		VTK_LIBS = $(VTK_PKG_LIBS)
+	endif
+
+	# Detect PCL version with pkg-config (e.g. "1.14.0")
+	PCL_VERSION := $(shell pkg-config --modversion pcl_common 2>/dev/null || true)
+	PCL_MAJOR   := $(word 1,$(subst ., ,$(PCL_VERSION)))
+	PCL_MINOR   := $(word 2,$(subst ., ,$(PCL_VERSION)))
+
+	# Pass version macros to the compiler
+	CXXFLAGS += -DPCL_MAJOR_VERSION=$(PCL_MAJOR) -DPCL_MINOR_VERSION=$(PCL_MINOR)
+endif
+all: $(TARGET)
+
+$(TARGET): $(SRC)
+	$(CXX) $(CXXFLAGS) -I$(VTK_INCLUDE) $(PCL_CFLAGS) -o $(TARGET) $(SRC) $(PCL_LIBS) $(VTK_LIBS)
+
+clean:
+	rm -f $(TARGET)
