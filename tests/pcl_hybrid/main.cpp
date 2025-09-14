@@ -138,8 +138,25 @@ void visualize(const ShapeFinder &sf) {
             // b = static_cast<int>(b * dim);
 
             pcl::visualization::PointCloudColorHandlerCustom<PointT> color_handler(cluster_cloud, r, g, b);
-            std::string id = "shape_cluster_" + std::to_string(cluster_id++);
+            int this_cluster_id = cluster_id++;
+            std::string id = "shape_cluster_" + std::to_string(this_cluster_id);
             viewer->addPointCloud<PointT>(cluster_cloud, color_handler, id);
+
+            // If this is a plane, draw connected line segments between sequential
+            // critical points (convex hull) and close the loop. Use same color.
+            if (shape->getType() == "plane") {
+                if (auto ps = std::dynamic_pointer_cast<PlaneShape>(shape)) {
+                    auto cp = ps->getCriticalPoints();
+                    if (cp && cp->size() >= 2) {
+                        for (size_t k = 0; k < cp->size(); ++k) {
+                            const PointT &p1 = (*cp)[k];
+                            const PointT &p2 = (*cp)[(k + 1) % cp->size()];
+                            std::string lid = "hull_line_" + std::to_string(this_cluster_id) + "_" + std::to_string(k);
+                            viewer->addLine<PointT>(p1, p2, r, g, b, lid);
+                        }
+                    }
+                }
+            }
         }
 
         // recurse into children

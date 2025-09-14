@@ -25,38 +25,74 @@ public:
 
 protected:
     std::vector<std::shared_ptr<Shape>> children_;
-};
 
-// CylinderShape stores the cluster's points and the dominant plane label
-class CylinderShape : public Shape {
-public:
-    CylinderShape(const PointCloudPtr& pts, int cylinder_label = -1)
-        : points_(pts), cylinder_label_(cylinder_label) {}
-
-    std::string getType() const override { return "cylinder"; }
-    std::string toJSON() const override;
-    PointCloudPtr getPoints() const override { return points_; }
-    int getCylinderLabel() const override { return cylinder_label_; }
-
-private:
-    PointCloudPtr points_;
-    int cylinder_label_ = -1;
 };
 
 // PlaneShape stores cluster points; for this simplified version we don't fit parameters
+// PlaneShape stores cluster points and pointers to coefficients and critical points
 class PlaneShape : public Shape {
 public:
+    using CoeffPtr = std::shared_ptr<std::vector<double>>; // nx,ny,nz,d (4)
+    using CritPtr = std::shared_ptr<std::vector<PointT>>;
+
     PlaneShape(const PointCloudPtr& pts, int plane_label = -1)
-        : points_(pts), plane_label_(plane_label) {}
+        : points_(pts), plane_label_(plane_label) {
+        coefficients_ = std::make_shared<std::vector<double>>(4, 0.0);
+        critical_points_ = std::make_shared<std::vector<PointT>>();
+        setCoefficients();
+        setCriticalPoints();
+    }
 
     std::string getType() const override { return "plane"; }
     std::string toJSON() const override;
     PointCloudPtr getPoints() const override { return points_; }
     int getPlaneLabel() const { return plane_label_; }
 
+    void setCoefficients();
+    void setCriticalPoints();
+
+    CoeffPtr getCoefficients() const { return coefficients_; }
+    CritPtr getCriticalPoints() const { return critical_points_; }
+
 private:
     PointCloudPtr points_;
     int plane_label_ = -1;
+    CoeffPtr coefficients_;
+    CritPtr critical_points_;
+};
+
+// Extended CylinderShape with coefficients and critical points
+class CylinderShape : public Shape {
+public:
+    using CoeffPtr = std::shared_ptr<std::vector<double>>; // px,py,pz, dx,dy,dz, radius (7)
+    using CritPtr = std::shared_ptr<std::vector<PointT>>;
+
+    CylinderShape(const PointCloudPtr& pts, int cylinder_label = -1)
+        : points_(pts), cylinder_label_(cylinder_label) {
+        coefficients_ = std::make_shared<std::vector<double>>(7, 0.0);
+        critical_points_ = std::make_shared<std::vector<PointT>>();
+        setCoefficients();
+        setCriticalPoints();
+    }
+
+    std::string getType() const override { return "cylinder"; }
+    std::string toJSON() const override;
+    PointCloudPtr getPoints() const override { return points_; }
+    int getCylinderLabel() const override { return cylinder_label_; }
+
+    // compute and populate coefficient array
+    void setCoefficients();
+    // compute and populate critical points (e.g., axis endpoints)
+    void setCriticalPoints();
+
+    CoeffPtr getCoefficients() const { return coefficients_; }
+    CritPtr getCriticalPoints() const { return critical_points_; }
+
+private:
+    PointCloudPtr points_;
+    int cylinder_label_ = -1;
+    CoeffPtr coefficients_;
+    CritPtr critical_points_;
 };
 
 // GenericShape is a flexible container for root/residual points. It allows
