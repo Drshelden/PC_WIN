@@ -1,9 +1,16 @@
 TARGET = main
-SRC = /mnt/c/_LOCAL/GitHub/PC_WIN/tests/pcl_hybrid/main.cpp
+SRCS = /mnt/c/_LOCAL/GitHub/PC_WIN/tests/pcl_hybrid/main.cpp /mnt/c/_LOCAL/GitHub/PC_WIN/tests/pcl_hybrid/utils.cpp /mnt/c/_LOCAL/GitHub/PC_WIN/tests/pcl_hybrid/PlaneAwareRegionGrowing.cpp /mnt/c/_LOCAL/GitHub/PC_WIN/tests/pcl_hybrid/PCWinPointCloud.cpp /mnt/c/_LOCAL/GitHub/PC_WIN/tests/pcl_hybrid/ShapeFinder.cpp /mnt/c/_LOCAL/GitHub/PC_WIN/tests/pcl_hybrid/shapes.cpp
+OBJS = $(SRCS:.cpp=.o)
 VTK_INCLUDE = /usr/include/vtk-9.1
 
 CXX = g++
-CXXFLAGS = -std=c++14 -Wall -O2
+# Base flags; optimization or debug flags are appended depending on DEBUG
+CXXFLAGS = -std=c++14 -Wall
+ifeq ($(DEBUG),1)
+	CXXFLAGS += -g -O0
+else
+	CXXFLAGS += -O2
+endif
 
 # Don't run pkg-config for trivial goals like 'clean' to avoid noisy warnings
 ifeq ($(filter clean,$(MAKECMDGOALS)),clean)
@@ -37,8 +44,8 @@ else
 endif
 all: $(TARGET)
 
-$(TARGET): $(SRC)
-	$(CXX) $(CXXFLAGS) -I$(VTK_INCLUDE) $(PCL_CFLAGS) -o $(TARGET) $(SRC) $(PCL_LIBS) $(VTK_LIBS)
+$(TARGET): $(SRCS)
+	$(CXX) $(CXXFLAGS) -I$(VTK_INCLUDE) $(PCL_CFLAGS) -o $(TARGET) $(SRCS) $(PCL_LIBS) $(VTK_LIBS)
 
 clean:
 	rm -f $(TARGET)

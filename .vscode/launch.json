@@ -1,0 +1,34 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug main (WSL)",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "/mnt/c/_LOCAL/GitHub/PC_WIN/tests/pcl_hybrid/main",
+            "args": ["/mnt/c/_LOCAL/GitHub/PC_WIN/tests/pcl_hybrid/synthetic_cylinders.pcd"],
+            "stopAtEntry": false,
+            "cwd": "/mnt/c/_LOCAL/GitHub/PC_WIN/tests/pcl_hybrid",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "miDebuggerPath": "/usr/bin/gdb",
+            "pipeTransport": {
+                "pipeProgram": "wsl.exe",
+                "pipeArgs": ["-e", "/usr/bin/gdb", "--interpreter=mi"],
+                "debuggerPath": "/usr/bin/gdb"
+            },
+            // Map remote (WSL) source paths to local Windows paths so VS Code can open files
+            "sourceFileMap": {
+                "/mnt/c/_LOCAL/GitHub/PC_WIN": "c:/_LOCAL/GitHub/PC_WIN"
+            },
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        }
+    ]
+}
