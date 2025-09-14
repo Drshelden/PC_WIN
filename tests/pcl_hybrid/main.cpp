@@ -25,14 +25,14 @@
 #include "PCWinPointCloud.h"
 #include "ShapeFinder.h"
 #include "shapes.h"
-#include "PlaneAwareRegionGrowing.h"
+#include "PCWinRegionGrowing.h"
 
 #define VISUALIZE
 #ifdef VISUALIZE
 void visualize(const ShapeFinder &sf);    
 #endif
 
-// class PlaneAwareRegionGrowing moved to PlaneAwareRegionGrowing.h / .cpp
+// class CylinderAwareRegionGrowing moved to PCWinRegionGrowing.h / .cpp
 
 // -------------------------------------------------------------------
 // Main
@@ -106,7 +106,7 @@ void visualize(const ShapeFinder &sf) {
         pcl::PointCloud<PointT>::Ptr cluster_cloud = shape->getPoints();
         if (cluster_cloud && !cluster_cloud->empty()) {
             int r = dist(rng), g = dist(rng), b = dist(rng);
-            if (shape->getType() == "plane") {
+            if (shape->getType() == "cylinder") {
                 int label = shape->getPlaneLabel();
                 if (label == 0) { r = bright(rng); g = 0; b = 0; }
                 if (label == 1) { r = 0; g = bright(rng); b = 0; }

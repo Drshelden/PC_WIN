@@ -1,5 +1,5 @@
 TARGET = main
-SRCS = /mnt/c/_LOCAL/GitHub/PC_WIN/tests/pcl_hybrid/main.cpp /mnt/c/_LOCAL/GitHub/PC_WIN/tests/pcl_hybrid/utils.cpp /mnt/c/_LOCAL/GitHub/PC_WIN/tests/pcl_hybrid/PlaneAwareRegionGrowing.cpp /mnt/c/_LOCAL/GitHub/PC_WIN/tests/pcl_hybrid/PCWinPointCloud.cpp /mnt/c/_LOCAL/GitHub/PC_WIN/tests/pcl_hybrid/ShapeFinder.cpp /mnt/c/_LOCAL/GitHub/PC_WIN/tests/pcl_hybrid/shapes.cpp
+SRCS = /mnt/c/_LOCAL/GitHub/PC_WIN/tests/pcl_hybrid/main.cpp /mnt/c/_LOCAL/GitHub/PC_WIN/tests/pcl_hybrid/utils.cpp /mnt/c/_LOCAL/GitHub/PC_WIN/tests/pcl_hybrid/PCWinRegionGrowing.cpp /mnt/c/_LOCAL/GitHub/PC_WIN/tests/pcl_hybrid/PCWinPointCloud.cpp /mnt/c/_LOCAL/GitHub/PC_WIN/tests/pcl_hybrid/ShapeFinder.cpp /mnt/c/_LOCAL/GitHub/PC_WIN/tests/pcl_hybrid/shapes.cpp
 OBJS = $(SRCS:.cpp=.o)
 VTK_INCLUDE = /usr/include/vtk-9.1
 

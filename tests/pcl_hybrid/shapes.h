@@ -26,13 +26,13 @@ protected:
     std::vector<std::shared_ptr<Shape>> children_;
 };
 
-// PlaneShape stores the cluster's points and the dominant plane label
-class PlaneShape : public Shape {
+// CylinderShape stores the cluster's points and the dominant plane label
+class CylinderShape : public Shape {
 public:
-    PlaneShape(const PointCloudPtr& pts, int plane_label)
+    CylinderShape(const PointCloudPtr& pts, int plane_label)
         : points_(pts), plane_label_(plane_label) {}
 
-    std::string getType() const override { return "plane"; }
+    std::string getType() const override { return "cylinder"; }
     std::string toJSON() const override;
     PointCloudPtr getPoints() const override { return points_; }
     int getPlaneLabel() const override { return plane_label_; }
@@ -40,18 +40,43 @@ public:
 private:
     PointCloudPtr points_;
     int plane_label_ = -1;
-    std::vector<std::shared_ptr<Shape>> children_;
 };
 
-// CylinderShape stores cluster points; for this simplified version we don't fit parameters
-class CylinderShape : public Shape {
+// OtherShape stores cluster points; for this simplified version we don't fit parameters
+class OtherShape : public Shape {
 public:
-    CylinderShape(const PointCloudPtr& pts)
+    OtherShape(const PointCloudPtr& pts)
         : points_(pts) {}
 
-    std::string getType() const override { return "cylinder"; }
+    std::string getType() const override { return "other"; }
     std::string toJSON() const override;
     PointCloudPtr getPoints() const override { return points_; }
+
+private:
+    PointCloudPtr points_;
+};
+
+// GenericShape is a flexible container for root/residual points. It allows
+// appending points after construction and is suitable as a root shape.
+class GenericShape : public Shape {
+public:
+    GenericShape() : points_(new pcl::PointCloud<PointT>()) {}
+    GenericShape(const PointCloudPtr& pts) : points_(pts ? pts : PointCloudPtr(new pcl::PointCloud<PointT>())) {}
+
+    std::string getType() const override { return "generic"; }
+    std::string toJSON() const override;
+    PointCloudPtr getPoints() const override { return points_; }
+
+    void appendPoints(const PointCloudPtr& other) {
+        if (!other || other->empty()) return;
+        if (!points_) points_.reset(new pcl::PointCloud<PointT>());
+        *points_ += *other;
+    }
+
+    void addPoint(const PointT& p) {
+        if (!points_) points_.reset(new pcl::PointCloud<PointT>());
+        points_->push_back(p);
+    }
 
 private:
     PointCloudPtr points_;

@@ -145,14 +145,14 @@ public:
 };
 
 // Plane Shape implementation
-class PlaneShape : public Shape {
+class CylinderShape : public Shape {
 private:
     struct PlaneCoefficients {
         double nx, ny, nz, d;  // Normal vector (nx, ny, nz) and distance d
     } coefficients_;
     
 public:
-    PlaneShape(size_t cluster_id, size_t global_id, const std::vector<std::size_t>& indices,
+    CylinderShape(size_t cluster_id, size_t global_id, const std::vector<std::size_t>& indices,
                const RANSAC_Pwn_vector& remaining_points, const std::array<double, 4>& coefficients)
         : Shape(cluster_id, global_id, indices, remaining_points) {
         coefficients_.nx = coefficients[0];
@@ -238,7 +238,7 @@ public:
 };
 
 // Cylinder Shape implementation
-class CylinderShape : public Shape {
+class OtherShape : public Shape {
 private:
     struct CylinderCoefficients {
         double px, py, pz;      // Point on axis
@@ -247,7 +247,7 @@ private:
     } coefficients_;
     
 public:
-    CylinderShape(size_t cluster_id, size_t global_id, const std::vector<std::size_t>& indices,
+    OtherShape(size_t cluster_id, size_t global_id, const std::vector<std::size_t>& indices,
                   const RANSAC_Pwn_vector& remaining_points, const std::array<double, 7>& coefficients)
         : Shape(cluster_id, global_id, indices, remaining_points) {
         coefficients_.px = coefficients[0];
@@ -791,11 +791,11 @@ public:
 };
 
 // Plane Factory implementation
-class PlaneShapeFactory : public ShapeFactory {
+class CylinderShapeFactory : public ShapeFactory {
 private:
     Efficient_ransac::Parameters parameters_;
 public:
-    PlaneShapeFactory() {
+    CylinderShapeFactory() {
         json s = (g_settings.contains("plane") && g_settings["plane"].is_object()) ? g_settings["plane"] : json::object();
         parameters_.min_points = s.value("min_points", 10);
         parameters_.epsilon = s.value("epsilon", 0.5);
@@ -843,7 +843,7 @@ public:
             auto assigned_indices = (*best_shape)->indices_of_assigned_points();
             std::vector<std::size_t> indices_vec(assigned_indices.begin(), assigned_indices.end());
             
-            auto shape = std::make_unique<PlaneShape>(cluster_id, global_id++, indices_vec, remaining_points, coefficients);
+            auto shape = std::make_unique<CylinderShape>(cluster_id, global_id++, indices_vec, remaining_points, coefficients);
             return shape;
         }
         
@@ -852,11 +852,11 @@ public:
 };
 
 // Cylinder Factory implementation
-class CylinderShapeFactory : public ShapeFactory {
+class OtherShapeFactory : public ShapeFactory {
 private:
     Efficient_ransac::Parameters parameters_;
 public:
-    CylinderShapeFactory() {
+    OtherShapeFactory() {
         json s = (g_settings.contains("cylinder") && g_settings["cylinder"].is_object()) ? g_settings["cylinder"] : json::object();
         parameters_.min_points = s.value("min_points", 8);
         parameters_.epsilon = s.value("epsilon", 2.0);
@@ -909,7 +909,7 @@ public:
             auto assigned_indices = (*best_shape)->indices_of_assigned_points();
             std::vector<std::size_t> indices_vec(assigned_indices.begin(), assigned_indices.end());
             
-            auto shape = std::make_unique<CylinderShape>(cluster_id, global_id++, indices_vec, remaining_points, coefficients);
+            auto shape = std::make_unique<OtherShape>(cluster_id, global_id++, indices_vec, remaining_points, coefficients);
             return shape;
         }
         
@@ -1243,15 +1243,15 @@ private:
         // Select factories based on solver_type
         std::vector<std::unique_ptr<ShapeFactory>> factories;
         if (solver_type == "BEST" || solver_type == "") {
-            factories.push_back(std::make_unique<PlaneShapeFactory>());
             factories.push_back(std::make_unique<CylinderShapeFactory>());
+            factories.push_back(std::make_unique<OtherShapeFactory>());
             factories.push_back(std::make_unique<ConeShapeFactory>());
             factories.push_back(std::make_unique<TorusShapeFactory>());
             factories.push_back(std::make_unique<PipingSequenceShapeFactory>());
         } else if (solver_type == "PLANE") {
-            factories.push_back(std::make_unique<PlaneShapeFactory>());
-        } else if (solver_type == "CYLINDER") {
             factories.push_back(std::make_unique<CylinderShapeFactory>());
+        } else if (solver_type == "CYLINDER") {
+            factories.push_back(std::make_unique<OtherShapeFactory>());
         } else if (solver_type == "CONE") {
             factories.push_back(std::make_unique<ConeShapeFactory>());
         } else if (solver_type == "TORUS") {

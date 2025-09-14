@@ -1,6 +1,6 @@
 #include "ShapeFinder.h"
 #include "PCWinPointCloud.h"
-#include "PlaneAwareRegionGrowing.h"
+#include "PCWinRegionGrowing.h"
 #include "shapes.h"
 #include <pcl/segmentation/extract_clusters.h>
 #include <pcl/search/kdtree.h>
@@ -29,13 +29,13 @@ int ShapeFinder::findShapes(const PCWin_PointCloud& pc) {
         std::vector<pcl::PointIndices> coarse_clusters;
         cec.extract(coarse_clusters);
 
-        // For each coarse cluster create a parent shape (as a CylinderShape placeholder)
+        // For each coarse cluster create a parent shape (as a OtherShape placeholder)
         for (auto &cl : coarse_clusters) {
             if (cl.indices.empty()) continue;
             pcl::PointCloud<PointT>::Ptr parent_cloud(new pcl::PointCloud<PointT>());
             for (int idx : cl.indices) parent_cloud->push_back(pc.cloud->at(idx));
             // create parent shape and register it
-            std::shared_ptr<Shape> parent = std::make_shared<CylinderShape>(parent_cloud);
+            std::shared_ptr<Shape> parent = std::make_shared<OtherShape>(parent_cloud);
             shapeCollection.push_back(parent);
             // also keep in clusters list for backwards compatibility
             clusters.push_back(parent_cloud);
@@ -47,7 +47,8 @@ int ShapeFinder::findShapes(const PCWin_PointCloud& pc) {
     // If Stage 0 was disabled, ensure we have at least one parent shape that
     // contains the whole cloud so the rest of the pipeline runs on something.
     if (shapeCollection.empty()) {
-        std::shared_ptr<Shape> root = std::make_shared<CylinderShape>(pc.cloud);
+        // use GenericShape as a flexible root that can collect residual points
+        std::shared_ptr<GenericShape> root = std::make_shared<GenericShape>(pc.cloud);
         shapeCollection.push_back(root);
         // keep backwards-compatible clusters/labels lists updated
         clusters.push_back(pc.cloud);
@@ -90,7 +91,7 @@ int ShapeFinder::findShapes(const PCWin_PointCloud& pc) {
         }
 
         // Run plane-aware region growing on the parent cloud
-        PlaneAwareRegionGrowing preg(parent_plane_labels, parent_normals);
+        CylinderAwareRegionGrowing preg(parent_plane_labels, parent_normals);
         preg.setMinClusterSize(25);
         preg.setMaxClusterSize(1000000);
         pcl::search::KdTree<PointT>::Ptr ptree(new pcl::search::KdTree<PointT>());
@@ -102,7 +103,7 @@ int ShapeFinder::findShapes(const PCWin_PointCloud& pc) {
         std::vector<pcl::PointIndices> p_plane_clusters;
         preg.extract(p_plane_clusters);
 
-        // For each local plane cluster, create a child PlaneShape and attach to parent
+        // For each local plane cluster, create a child CylinderShape and attach to parent
         std::unordered_set<int> used_local_indices;
         for (auto &cl : p_plane_clusters) {
             if (cl.indices.empty()) continue;
@@ -112,7 +113,7 @@ int ShapeFinder::findShapes(const PCWin_PointCloud& pc) {
                 used_local_indices.insert(idx);
             }
             int label = parent_plane_labels[cl.indices.front()];
-            std::shared_ptr<Shape> child = std::make_shared<PlaneShape>(child_cloud, label);
+            std::shared_ptr<Shape> child = std::make_shared<CylinderShape>(child_cloud, label);
             parent->addChild(child);
             clusters.push_back(child_cloud);
             clusterPlaneLabels.push_back(label);
@@ -129,28 +130,30 @@ int ShapeFinder::findShapes(const PCWin_PointCloud& pc) {
         }
 
         if (!residual_local->empty()) {
-            pcl::search::KdTree<PointT>::Ptr rtree(new pcl::search::KdTree<PointT>());
-            rtree->setInputCloud(residual_local);
-            pcl::EuclideanClusterExtraction<PointT> rec;
-            rec.setClusterTolerance(0.02);
-            rec.setMinClusterSize(25);
-            rec.setMaxClusterSize(1000000);
-            rec.setSearchMethod(rtree);
-            rec.setInputCloud(residual_local);
-            std::vector<pcl::PointIndices> local_euc_clusters;
-            rec.extract(local_euc_clusters);
-
-            for (auto &cl : local_euc_clusters) {
-                if (cl.indices.empty()) continue;
-                pcl::PointCloud<PointT>::Ptr child_cloud(new pcl::PointCloud<PointT>());
-                for (int ridx : cl.indices) {
-                    int original_idx = residual_local_map[ridx];
-                    child_cloud->push_back(parent_cloud->at(original_idx));
+            // Instead of creating separate child clusters for residuals, append
+            // them to the root GenericShape so they are preserved and visible.
+            // Find the root (the first shape in shapeCollection is our root when
+            // Stage 0 is disabled or no coarse clusters created).
+            if (!shapeCollection.empty()) {
+                // we expect the root to be a GenericShape; attempt dynamic_cast
+                auto root_generic = std::dynamic_pointer_cast<GenericShape>(shapeCollection.front());
+                if (root_generic) {
+                    // construct a temporary cloud of residuals in original parent coordinates
+                    pcl::PointCloud<PointT>::Ptr mapped_residual(new pcl::PointCloud<PointT>());
+                    for (int i = 0; i < static_cast<int>(residual_local->size()); ++i) {
+                        mapped_residual->push_back(residual_local->at(i));
+                    }
+                    root_generic->appendPoints(mapped_residual);
+                } else {
+                    // fallback: if root isn't GenericShape, push residuals as clusters
+                    for (std::size_t i = 0; i < residual_local->size(); ++i) {
+                        pcl::PointCloud<PointT>::Ptr single(new pcl::PointCloud<PointT>());
+                        single->push_back(residual_local->at(i));
+                        parent->addChild(std::make_shared<OtherShape>(single));
+                        clusters.push_back(single);
+                        clusterPlaneLabels.push_back(-1);
+                    }
                 }
-                std::shared_ptr<Shape> child = std::make_shared<CylinderShape>(child_cloud);
-                parent->addChild(child);
-                clusters.push_back(child_cloud);
-                clusterPlaneLabels.push_back(-1);
             }
         }
     }

@@ -1,6 +1,6 @@
 #include "ShapeFinder.h"
 #include "PCWinPointCloud.h"
-#include "PlaneAwareRegionGrowing.h"
+#include "PCWinRegionGrowing.h"
 #include "shapes.h"
 #include <pcl/segmentation/extract_clusters.h>
 #include <pcl/search/kdtree.h>
@@ -27,13 +27,13 @@ int ShapeFinder::findShapes(const PCWin_PointCloud& pc) {
         std::vector<pcl::PointIndices> coarse_clusters;
         cec.extract(coarse_clusters);
 
-        // For each coarse cluster create a parent shape (as a CylinderShape placeholder)
+        // For each coarse cluster create a parent shape (as a OtherShape placeholder)
         for (auto &cl : coarse_clusters) {
             if (cl.indices.empty()) continue;
             pcl::PointCloud<PointT>::Ptr parent_cloud(new pcl::PointCloud<PointT>());
             for (int idx : cl.indices) parent_cloud->push_back(pc.cloud->at(idx));
             // create parent shape and register it
-            std::shared_ptr<Shape> parent = std::make_shared<CylinderShape>(parent_cloud);
+            std::shared_ptr<Shape> parent = std::make_shared<GenericShape>(parent_cloud);
             shapeCollection.push_back(parent);
             // also keep in clusters list for backwards compatibility
             clusters.push_back(parent_cloud);
@@ -77,7 +77,7 @@ int ShapeFinder::findShapes(const PCWin_PointCloud& pc) {
         }
 
         // Run plane-aware region growing on the parent cloud
-        PlaneAwareRegionGrowing preg(parent_plane_labels, parent_normals);
+        CylinderAwareRegionGrowing preg(parent_plane_labels, parent_normals);
         preg.setMinClusterSize(25);
         preg.setMaxClusterSize(1000000);
         pcl::search::KdTree<PointT>::Ptr ptree(new pcl::search::KdTree<PointT>());
@@ -89,7 +89,7 @@ int ShapeFinder::findShapes(const PCWin_PointCloud& pc) {
         std::vector<pcl::PointIndices> p_plane_clusters;
         preg.extract(p_plane_clusters);
 
-        // For each local plane cluster, create a child PlaneShape and attach to parent
+        // For each local plane cluster, create a child CylinderShape and attach to parent
         std::unordered_set<int> used_local_indices;
         for (auto &cl : p_plane_clusters) {
             if (cl.indices.empty()) continue;
@@ -99,7 +99,7 @@ int ShapeFinder::findShapes(const PCWin_PointCloud& pc) {
                 used_local_indices.insert(idx);
             }
             int label = parent_plane_labels[cl.indices.front()];
-            std::shared_ptr<Shape> child = std::make_shared<PlaneShape>(child_cloud, label);
+            std::shared_ptr<Shape> child = std::make_shared<CylinderShape>(child_cloud, label);
             parent->addChild(child);
             clusters.push_back(child_cloud);
             clusterPlaneLabels.push_back(label);
@@ -134,7 +134,7 @@ int ShapeFinder::findShapes(const PCWin_PointCloud& pc) {
                     int original_idx = residual_local_map[ridx];
                     child_cloud->push_back(parent_cloud->at(original_idx));
                 }
-                std::shared_ptr<Shape> child = std::make_shared<CylinderShape>(child_cloud);
+                std::shared_ptr<Shape> child = std::make_shared<OtherShape>(child_cloud);
                 parent->addChild(child);
                 clusters.push_back(child_cloud);
                 clusterPlaneLabels.push_back(-1);
