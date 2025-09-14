@@ -82,37 +82,34 @@ int ShapeFinder::findShapes(const PCWin_PointCloud& pc) {
 
         // Compute normal-dominant labels locally (norm: 0=X,1=Y,2=Z, -1 none)
         // These indicate which axis the normal is most aligned with.
-        std::vector<int> parent_norm_labels(parent_cloud->size(), -1);
-        for (std::size_t i = 0; i < parent_normals->size(); ++i) {
-            auto& n = parent_normals->at(i);
-            float ax = std::abs(n.normal_x);
-            float ay = std::abs(n.normal_y);
-            float az = std::abs(n.normal_z);
-            // pick largest absolute component; if near-equal use -1
-            if (az > ax && az > ay) parent_norm_labels[i] = 2;
-            else if (ax > ay && ax > az) parent_norm_labels[i] = 0;
-            else if (ay > ax && ay > az) parent_norm_labels[i] = 1;
-            else parent_norm_labels[i] = -1;
-        }
-
-        // Compute plane-compatibility labels (0..2 or -1)
         std::vector<int> parent_plane_labels(parent_cloud->size(), -1);
         for (std::size_t i = 0; i < parent_normals->size(); ++i) {
             auto& n = parent_normals->at(i);
             float ax = std::abs(n.normal_x);
             float ay = std::abs(n.normal_y);
             float az = std::abs(n.normal_z);
-            if (az <= ax && az <= ay) {
-                if (az >= small_angle_sin) parent_plane_labels[i] = -1; else parent_plane_labels[i] = 0;
-            } else if (ax <= ay && ax <= az) {
-                if (ax >= small_angle_sin) parent_plane_labels[i] = -1; else parent_plane_labels[i] = 1;
-            } else {
-                if (ay >= small_angle_sin) parent_plane_labels[i] = -1; else parent_plane_labels[i] = 2;
-            }
+            // pick largest absolute component; if near-equal use -1
+            if (az > ax && az > ay) parent_plane_labels[i] = 2;
+            else if (ax > ay && ax > az) parent_plane_labels[i] = 0;
+            else if (ay > ax && ay > az) parent_plane_labels[i] = 1;
+            else parent_plane_labels[i] = -1;
         }
 
-        // For cylinder-aware region growing we pass a slightly different label set
-        std::vector<int> parent_cylinder_labels = parent_plane_labels;
+        // Compute plane-compatibility labels (0..2 or -1)
+        std::vector<int> parent_cylinder_labels(parent_cloud->size(), -1);
+        for (std::size_t i = 0; i < parent_normals->size(); ++i) {
+            auto& n = parent_normals->at(i);
+            float ax = std::abs(n.normal_x);
+            float ay = std::abs(n.normal_y);
+            float az = std::abs(n.normal_z);
+            if (az <= ax && az <= ay) {
+                if (az >= small_angle_sin) parent_cylinder_labels[i] = -1; else parent_cylinder_labels[i] = 0;
+            } else if (ax <= ay && ax <= az) {
+                if (ax >= small_angle_sin) parent_cylinder_labels[i] = -1; else parent_cylinder_labels[i] = 1;
+            } else {
+                if (ay >= small_angle_sin) parent_cylinder_labels[i] = -1; else parent_cylinder_labels[i] = 2;
+            }
+        }
 
         // Run plane-aware region growing on the parent cloud
         CylinderAwareRegionGrowing preg(parent_cylinder_labels, parent_normals);
@@ -160,7 +157,7 @@ int ShapeFinder::findShapes(const PCWin_PointCloud& pc) {
                 for (int pidx : plane_clusters[pid].indices) if (cylset.find(pidx) != cylset.end()) ++overlap;
                 if (overlap > best_overlap) { best_overlap = overlap; best_plane_idx = static_cast<int>(pid); }
             }
-
+            
             int plane_size = (best_plane_idx != -1) ? static_cast<int>(plane_clusters[best_plane_idx].indices.size()) : 0;
             if (best_plane_idx != -1 && plane_size >= cylinder_size) {
                 // plane-aware cluster covers more points -> create PlaneShape from that plane cluster
@@ -191,24 +188,24 @@ int ShapeFinder::findShapes(const PCWin_PointCloud& pc) {
                 clusterPlaneLabels.push_back(dominant_plane);
                 plane_used[best_plane_idx] = 1;
             } else {
-                // keep cylinder cluster as-is
+                // keep cylinder cluster as-is -> create a CylinderShape
                 pcl::PointCloud<PointT>::Ptr child_cloud(new pcl::PointCloud<PointT>());
                 for (int idx : cl.indices) {
                     child_cloud->push_back(parent_cloud->at(idx));
                     used_local_indices.insert(idx);
                 }
-                // determine dominant plane label within this cylinder cluster (used as cylinder label)
+                // determine dominant cylinder label within this cylinder cluster
                 std::unordered_map<int,int> cfreq;
                 for (int idx : cl.indices) {
-                    int lab = parent_plane_labels[idx];
+                    int lab = parent_cylinder_labels[idx];
                     if (lab != -1) cfreq[lab]++;
                 }
-                int dominant_cyl_label = -1; int cbest = 0;
-                for (auto &kv : cfreq) if (kv.second > cbest) { cbest = kv.second; dominant_cyl_label = kv.first; }
-                std::shared_ptr<Shape> child = std::make_shared<CylinderShape>(child_cloud, dominant_cyl_label);
+                int dominant_cylinder_label = -1; int cbest = 0;
+                for (auto &kv : cfreq) if (kv.second > cbest) { cbest = kv.second; dominant_cylinder_label = kv.first; }
+                std::shared_ptr<Shape> child = std::make_shared<CylinderShape>(child_cloud, dominant_cylinder_label);
                 parent->addChild(child);
                 clusters.push_back(child_cloud);
-                clusterPlaneLabels.push_back(dominant_cyl_label);
+                clusterPlaneLabels.push_back(dominant_cylinder_label);
             }
         }
 

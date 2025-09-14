@@ -6,7 +6,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "/mnt/c/_LOCAL/GitHub/PC_WIN/tests/pcl_hybrid/main",
-            "args": ["/mnt/c/_LOCAL/GitHub/PC_WIN/tests/pcl_hybrid/planes.xyz"],
+            "args": ["/mnt/c/_LOCAL/GitHub/PC_WIN/tests/pcl_hybrid/quad.xyz"],
             "stopAtEntry": false,
             "cwd": "/mnt/c/_LOCAL/GitHub/PC_WIN/tests/pcl_hybrid",
             "environment": [],

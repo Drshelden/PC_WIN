@@ -2,7 +2,7 @@
 #include <Eigen/Dense>
 #include <cmath>
 
-#define angle_tolerance_deg 5.0f
+#define angle_tolerance_deg 2.0f
 
 PlaneAwareRegionGrowing::PlaneAwareRegionGrowing(const std::vector<int>& labels,
                                                  pcl::PointCloud<pcl::Normal>::ConstPtr norms)
