@@ -151,9 +151,21 @@ void visualize(const ShapeFinder &sf) {
                         for (size_t k = 0; k < cp->size(); ++k) {
                             const PointT &p1 = (*cp)[k];
                             const PointT &p2 = (*cp)[(k + 1) % cp->size()];
-                            std::string lid = "hull_line_" + std::to_string(this_cluster_id) + "_" + std::to_string(k);
+                            std::string lid = "plane_bound_" + std::to_string(this_cluster_id) + "_" + std::to_string(k);
                             viewer->addLine<PointT>(p1, p2, r, g, b, lid);
                         }
+                    }
+                }
+            }
+            // If cylinder, draw a single spine segment between its two critical points
+            if (shape->getType() == "cylinder") {
+                if (auto cs = std::dynamic_pointer_cast<CylinderShape>(shape)) {
+                    auto cp = cs->getCriticalPoints();
+                    if (cp && cp->size() >= 2) {
+                        const PointT &p1 = (*cp)[0];
+                        const PointT &p2 = (*cp)[1];
+                        std::string lid = "cyl_spine_" + std::to_string(this_cluster_id);
+                        viewer->addLine<PointT>(p1, p2, r, g, b, lid);
                     }
                 }
             }

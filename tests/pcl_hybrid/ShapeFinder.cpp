@@ -103,11 +103,11 @@ int ShapeFinder::findShapes(const PCWin_PointCloud& pc) {
             float ay = std::abs(n.normal_y);
             float az = std::abs(n.normal_z);
             if (az <= ax && az <= ay) {
-                if (az >= small_angle_sin) parent_cylinder_labels[i] = -1; else parent_cylinder_labels[i] = 0;
+                if (az >= small_angle_sin) parent_cylinder_labels[i] = -1; else parent_cylinder_labels[i] = 2;
             } else if (ax <= ay && ax <= az) {
-                if (ax >= small_angle_sin) parent_cylinder_labels[i] = -1; else parent_cylinder_labels[i] = 1;
+                if (ax >= small_angle_sin) parent_cylinder_labels[i] = -1; else parent_cylinder_labels[i] = 0;
             } else {
-                if (ay >= small_angle_sin) parent_cylinder_labels[i] = -1; else parent_cylinder_labels[i] = 2;
+                if (ay >= small_angle_sin) parent_cylinder_labels[i] = -1; else parent_cylinder_labels[i] = 1;
             }
         }
 

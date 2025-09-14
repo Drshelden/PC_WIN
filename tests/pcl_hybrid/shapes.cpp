@@ -3,6 +3,9 @@
 #include <algorithm>
 #include <numeric>
 #include <cmath>
+#include <random>
+#include <pcl/features/normal_3d.h>
+#include <pcl/search/kdtree.h>
 #include <Eigen/Dense>
 
 using json = nlohmann::json;
@@ -168,46 +171,114 @@ void PlaneShape::setCriticalPoints() {
 // CylinderShape: simple PCA axis and radius estimate; critical points are axis endpoints
 void CylinderShape::setCoefficients() {
     if (!points_ || points_->empty()) return;
-    // compute centroid
-    Eigen::Vector3d mean(0,0,0);
-    for (const auto &p : points_->points) mean += Eigen::Vector3d(p.x,p.y,p.z);
-    mean /= points_->size();
-    // assemble matrix
-    Eigen::MatrixXd M(points_->size(),3);
-    for (size_t i=0;i<points_->size();++i){ M(i,0)=points_->points[i].x - mean.x(); M(i,1)=points_->points[i].y - mean.y(); M(i,2)=points_->points[i].z - mean.z(); }
-    Eigen::Matrix3d cov = (M.adjoint()*M)/(M.rows()-1);
-    Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> es(cov);
-    Eigen::Vector3d axis = es.eigenvectors().col(2); // largest eigenvector
-    axis.normalize();
-    // radius estimate = mean distance to axis
-    double sumd=0;
-    for (const auto &p : points_->points) {
-        Eigen::Vector3d v(p.x-mean.x(), p.y-mean.y(), p.z-mean.z());
-        Eigen::Vector3d proj = axis * (v.dot(axis));
-        Eigen::Vector3d perp = v - proj; sumd += perp.norm();
+    // Build local arrays of point positions and (optional) normals if available
+    std::vector<Eigen::Vector3d> P;
+    P.reserve(points_->size());
+    for (const auto &pt : points_->points) P.emplace_back(pt.x, pt.y, pt.z);
+
+    // For sampling we need normals. We will estimate normals locally via PCA on k-neighbors
+    // Build a temporary PCL cloud and compute normals if needed
+    pcl::PointCloud<pcl::PointXYZ>::Ptr tmp(new pcl::PointCloud<pcl::PointXYZ>());
+    for (const auto &pt : points_->points) tmp->push_back(pt);
+    pcl::NormalEstimation<pcl::PointXYZ, pcl::Normal> ne;
+    pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>());
+    ne.setInputCloud(tmp);
+    ne.setSearchMethod(tree);
+    ne.setKSearch(std::min<size_t>(30, tmp->size()));
+    pcl::PointCloud<pcl::Normal> normals;
+    ne.compute(normals);
+
+    // Determine the weak axis (cylinder plane) from cylinder_label_: 0->X weak axis is X, etc.
+    int weak_axis = cylinder_label_ >= 0 ? cylinder_label_ : 2;
+
+    // sampling parameters
+    std::mt19937 rng(12345);
+    size_t sampleN = std::min<size_t>(30, P.size());
+
+    std::vector<Eigen::Vector3d> pint_accum;
+    pint_accum.reserve(sampleN);
+
+    std::uniform_int_distribution<size_t> dist(0, P.size()-1);
+    for (size_t s=0; s<sampleN; ++s) {
+        size_t i1 = dist(rng);
+        size_t i2 = dist(rng);
+        if (i1 == i2) continue;
+        Eigen::Vector3d p1 = P[i1]; Eigen::Vector3d p2 = P[i2];
+        Eigen::Vector3d n1(0,0,1), n2(0,0,1);
+        if (i1 < normals.size()) n1 = Eigen::Vector3d(normals[i1].normal_x, normals[i1].normal_y, normals[i1].normal_z);
+        if (i2 < normals.size()) n2 = Eigen::Vector3d(normals[i2].normal_x, normals[i2].normal_y, normals[i2].normal_z);
+
+        // zero the weak axis coordinate to project into the governing plane
+        if (weak_axis == 0) { p1.x() = 0; p2.x() = 0; n1.x() = 0; n2.x() = 0; }
+        else if (weak_axis == 1) { p1.y() = 0; p2.y() = 0; n1.y() = 0; n2.y() = 0; }
+        else { p1.z() = 0; p2.z() = 0; n1.z() = 0; n2.z() = 0; }
+
+        // In-plane intersection of lines p1 + t*n1 and p2 + u*n2.
+        // Solve for intersection in 2D by choosing two coordinates that remain (indices a,b)
+        int a = (weak_axis + 1) % 3; int b = (weak_axis + 2) % 3;
+        double x1 = p1[a], y1 = p1[b], dx1 = n1[a], dy1 = n1[b];
+        double x2 = p2[a], y2 = p2[b], dx2 = n2[a], dy2 = n2[b];
+        double denom = dx1*dy2 - dy1*dx2;
+        if (std::abs(denom) < 1e-9) continue; // parallel
+        double t = ( (x2 - x1)*dy2 - (y2 - y1)*dx2 ) / denom;
+        Eigen::Vector3d pint;
+        // reconstruct full 3D pint by inserting the remaining coordinate as 0 in weak axis slot
+        for (int k=0;k<3;++k) pint[k] = 0.0;
+        pint[a] = x1 + t*dx1; pint[b] = y1 + t*dy1;
+        pint_accum.push_back(pint);
     }
-    double radius = sumd / points_->size();
-    if (coefficients_) {
-        (*coefficients_)[0] = mean.x(); (*coefficients_)[1] = mean.y(); (*coefficients_)[2] = mean.z();
-        (*coefficients_)[3] = axis.x(); (*coefficients_)[4] = axis.y(); (*coefficients_)[5] = axis.z(); (*coefficients_)[6] = radius;
+
+    if (pint_accum.empty()) {
+        // fallback to centroid
+        Eigen::Vector3d centroid(0,0,0); for (auto &p : P) centroid += p; centroid /= P.size();
+        (*coefficients_)[0] = centroid.x(); (*coefficients_)[1] = centroid.y(); (*coefficients_)[2] = centroid.z();
+        // axis is the weak axis unit vector
+        Eigen::Vector3d axis(0,0,0); axis[weak_axis] = 1.0;
+        (*coefficients_)[3] = axis.x(); (*coefficients_)[4] = axis.y(); (*coefficients_)[5] = axis.z();
+        // radius average
+        double rsum = 0; for (auto &p : P) { Eigen::Vector3d v = p - centroid; Eigen::Vector3d proj = axis*(v.dot(axis)); rsum += (v - proj).norm(); }
+        (*coefficients_)[6] = rsum / P.size();
+        return;
     }
+
+    // average pint to get porig
+    Eigen::Vector3d porig(0,0,0); for (auto &pp : pint_accum) porig += pp; porig /= pint_accum.size();
+    // axis is weak-axis unit vector
+    Eigen::Vector3d axis(0,0,0); axis[weak_axis] = 1.0;
+
+    // project points onto axis, find min/max projections and average perpendicular distance
+    double amin = std::numeric_limits<double>::infinity(), amax = -std::numeric_limits<double>::infinity();
+    double rsum = 0.0;
+    for (const auto &p : P) {
+        Eigen::Vector3d v = p - porig;
+        double proj = v.dot(axis);
+        amin = std::min(amin, proj); amax = std::max(amax, proj);
+        Eigen::Vector3d perp = v - proj*axis; rsum += perp.norm();
+    }
+    double radius = rsum / P.size();
+
+    Eigen::Vector3d p1 = porig + axis * amin;
+    (*coefficients_)[0] = p1.x(); (*coefficients_)[1] = p1.y(); (*coefficients_)[2] = p1.z();
+    (*coefficients_)[3] = axis.x(); (*coefficients_)[4] = axis.y(); (*coefficients_)[5] = axis.z(); (*coefficients_)[6] = radius;
 }
 
 void CylinderShape::setCriticalPoints() {
     if (!points_ || points_->empty()) return;
-    // compute projections onto axis to find min/max
-    Eigen::Vector3d mean((*coefficients_)[0], (*coefficients_)[1], (*coefficients_)[2]);
+    if (!coefficients_) return;
+    Eigen::Vector3d p1((*coefficients_)[0], (*coefficients_)[1], (*coefficients_)[2]);
     Eigen::Vector3d axis((*coefficients_)[3], (*coefficients_)[4], (*coefficients_)[5]); axis.normalize();
+    // project each point onto axis to find min/max
     double amin = std::numeric_limits<double>::infinity(), amax = -std::numeric_limits<double>::infinity();
-    for (const auto &p : points_->points) {
-        Eigen::Vector3d v(p.x-mean.x(), p.y-mean.y(), p.z-mean.z());
+    Eigen::Vector3d porig = p1; // p1 was chosen as porig origin in setCoefficients
+    for (const auto &pt : points_->points) {
+        Eigen::Vector3d v(pt.x - porig.x(), pt.y - porig.y(), pt.z - porig.z());
         double proj = v.dot(axis);
         amin = std::min(amin, proj); amax = std::max(amax, proj);
     }
-    Eigen::Vector3d p1 = mean + axis * amin; Eigen::Vector3d p2 = mean + axis * amax;
+    Eigen::Vector3d cp1 = porig + axis * amin; Eigen::Vector3d cp2 = porig + axis * amax;
     if (!critical_points_) critical_points_ = std::make_shared<std::vector<PointT>>();
     critical_points_->clear();
-    PointT pp1; pp1.x = static_cast<float>(p1.x()); pp1.y = static_cast<float>(p1.y()); pp1.z = static_cast<float>(p1.z());
-    PointT pp2; pp2.x = static_cast<float>(p2.x()); pp2.y = static_cast<float>(p2.y()); pp2.z = static_cast<float>(p2.z());
+    PointT pp1; pp1.x = static_cast<float>(cp1.x()); pp1.y = static_cast<float>(cp1.y()); pp1.z = static_cast<float>(cp1.z());
+    PointT pp2; pp2.x = static_cast<float>(cp2.x()); pp2.y = static_cast<float>(cp2.y()); pp2.z = static_cast<float>(cp2.z());
     critical_points_->push_back(pp1); critical_points_->push_back(pp2);
 }
