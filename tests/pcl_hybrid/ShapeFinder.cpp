@@ -75,7 +75,29 @@ int ShapeFinder::findShapes(const PCWin_PointCloud& pc) {
             ne.compute(*parent_normals);
         }
 
+        // Find the sin of a small angle
+        float small_angle_deg = 3.0f;
+        float small_angle_sin = std::sin(small_angle_deg * static_cast<float>(M_PI) / 180.0f);
+
         // Compute plane labels locally
+        std::vector<int> parent_norm_labels(parent_cloud->size());
+        for (std::size_t i = 0; i < parent_normals->size(); ++i) {
+            auto& n = parent_normals->at(i);
+            float ax = std::abs(n.normal_x);
+            float ay = std::abs(n.normal_y);
+            float az = std::abs(n.normal_z);
+            if (az >= ax && az >= ay)
+                if ((ax >= small_angle_sin) || (ay >= small_angle_sin)) parent_norm_labels[i] = -1;
+                else parent_norm_labels[i] = 2;
+            else if (ax <= ay && ax <= az)
+                if ((ay >= small_angle_sin) || (az >= small_angle_sin)) parent_norm_labels[i] = -1;
+                else parent_norm_labels[i] = 0;
+            else
+                if ((ax >= small_angle_sin) || (az >= small_angle_sin)) parent_norm_labels[i] = -1;
+                else parent_norm_labels[i] = 1;
+        }
+  
+                // Compute plane labels locally
         std::vector<int> parent_plane_labels(parent_cloud->size());
         for (std::size_t i = 0; i < parent_normals->size(); ++i) {
             auto& n = parent_normals->at(i);
@@ -83,11 +105,14 @@ int ShapeFinder::findShapes(const PCWin_PointCloud& pc) {
             float ay = std::abs(n.normal_y);
             float az = std::abs(n.normal_z);
             if (az <= ax && az <= ay)
-                parent_plane_labels[i] = 0;
+                if (az >= small_angle_sin) parent_plane_labels[i] = -1;
+                else parent_plane_labels[i] = 0;
             else if (ax <= ay && ax <= az)
-                parent_plane_labels[i] = 1;
+                if (ax >= small_angle_sin) parent_plane_labels[i] = -1;
+                else parent_plane_labels[i] = 1;
             else
-                parent_plane_labels[i] = 2;
+                if (ay >= small_angle_sin) parent_plane_labels[i] = -1;
+                else parent_plane_labels[i] = 2;
         }
 
         // Run plane-aware region growing on the parent cloud
