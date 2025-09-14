@@ -31,6 +31,6 @@ protected:
     bool validatePoint(pcl::index_t initial_seed, pcl::index_t point, pcl::index_t nghbr, bool& is_a_seed) const override;
 
 private:
-    const std::vector<int>& plane_labels_;
+    const std::vector<int>& cylinder_labels_;
     pcl::PointCloud<pcl::Normal>::ConstPtr normals_;
 };

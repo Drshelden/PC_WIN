@@ -93,9 +93,10 @@ void visualize(const ShapeFinder &sf) {
     viewer->setBackgroundColor(0, 0, 0);
 
     std::mt19937 rng(42);
-    std::uniform_int_distribution<int> dist(0, 255);
-    // bright shades for plane-based colors (128..255)
-    std::uniform_int_distribution<int> bright(128, 255);
+    std::uniform_int_distribution<int> dist(255, 255);
+    // bright shades for plane-based colors (255..255)
+    std::uniform_int_distribution<int> bright(255, 255);
+    
 
     int cluster_id = 0;
 
@@ -106,18 +107,35 @@ void visualize(const ShapeFinder &sf) {
         pcl::PointCloud<PointT>::Ptr cluster_cloud = shape->getPoints();
         if (cluster_cloud && !cluster_cloud->empty()) {
             int r = dist(rng), g = dist(rng), b = dist(rng);
+            // Color rules:
+            // - generic (residual/root) clusters: neutral grey
+            // - plane clusters: colored based on dominant normal axis
+            if (shape->getType() == "generic") {
+                r = g = b = 128;
+            } 
+            
+            if (shape->getType() == "plane") {
+                // attempt to read plane_label via PlaneShape
+                int plane_label = -1;
+                if (auto ps = std::dynamic_pointer_cast<PlaneShape>(shape)) plane_label = ps->getPlaneLabel();
+                if (plane_label == 0) { r = bright(rng); g = bright(rng); b = 0; } // X-dominant
+                else if (plane_label == 1) { r = 0; g = bright(rng); b = bright(rng); } // Y-dominant
+                else if (plane_label == 2) { r = bright(rng); g = 0; b = bright(rng); } // Z-dominant
+            }
+            
             if (shape->getType() == "cylinder") {
-                int label = shape->getPlaneLabel();
-                if (label == 0) { r = bright(rng); g = 0; b = 0; }
-                if (label == 1) { r = 0; g = bright(rng); b = 0; }
-                if (label == 2) { r = 0; g = 0; b = bright(rng); }
+                int cylinder_label = -1;
+                if (auto cs = std::dynamic_pointer_cast<CylinderShape>(shape)) cylinder_label = cs->getCylinderLabel();
+                if (cylinder_label == 0) { r = bright(rng); g = 0; b = 0; }
+                if (cylinder_label == 1) { r = 0; g = bright(rng); b = 0; }
+                if (cylinder_label == 2) { r = 0; g = 0; b = bright(rng); }
             }
 
-            // slightly dim colors for deeper levels (optional visual cue)
-            float dim = 1.0f - std::min(0.5f, depth * 0.12f);
-            r = static_cast<int>(r * dim);
-            g = static_cast<int>(g * dim);
-            b = static_cast<int>(b * dim);
+            // // slightly dim colors for deeper levels (optional visual cue)
+            // float dim = 1.0f - std::min(0.5f, depth * 0.12f);
+            // r = static_cast<int>(r * dim);
+            // g = static_cast<int>(g * dim);
+            // b = static_cast<int>(b * dim);
 
             pcl::visualization::PointCloudColorHandlerCustom<PointT> color_handler(cluster_cloud, r, g, b);
             std::string id = "shape_cluster_" + std::to_string(cluster_id++);

@@ -6,7 +6,7 @@ using json = nlohmann::json;
 std::string CylinderShape::toJSON() const {
     json j;
     j["type"] = getType();
-    j["plane_label"] = plane_label_;
+    j["cylinder_label"] = getCylinderLabel();
     j["points"] = json::array();
     for (const auto& pt : points_->points) {
         j["points"].push_back({pt.x, pt.y, pt.z});
@@ -14,10 +14,11 @@ std::string CylinderShape::toJSON() const {
     return j.dump();
 }
 
-std::string OtherShape::toJSON() const {
+std::string PlaneShape::toJSON() const {
     json j;
     j["type"] = getType();
     j["points"] = json::array();
+    j["plane_label"] = getPlaneLabel();
     for (const auto& pt : points_->points) {
         j["points"].push_back({pt.x, pt.y, pt.z});
     }
