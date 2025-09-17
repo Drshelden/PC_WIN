@@ -14,6 +14,9 @@
 # EXTERNAL cache entries
 ########################
 
+//Build Python bindings (requires pybind11)
+BUILD_PYTHON:BOOL=ON
+
 //Path to a file.
 BZIP2_INCLUDE_DIR:PATH=C:/Users/sheldd/vcpkg/installed/x64-windows/include
 
@@ -333,7 +336,7 @@ PCL_SEGMENTATION_LIBRARY_DEBUG:FILEPATH=C:/Users/sheldd/vcpkg/installed/x64-wind
 PKG_CONFIG_ARGN:STRING=
 
 //pkg-config executable
-PKG_CONFIG_EXECUTABLE:FILEPATH=PKG_CONFIG_EXECUTABLE-NOTFOUND
+PKG_CONFIG_EXECUTABLE:FILEPATH=C:/Users/sheldd/vcpkg/installed/x64-windows/tools/pkgconf/pkgconf.exe
 
 //Path to a library.
 PNG_LIBRARY_DEBUG:FILEPATH=C:/Users/sheldd/vcpkg/installed/x64-windows/debug/lib/libpng16d.lib
@@ -343,6 +346,16 @@ PNG_LIBRARY_RELEASE:FILEPATH=C:/Users/sheldd/vcpkg/installed/x64-windows/lib/lib
 
 //Path to a file.
 PNG_PNG_INCLUDE_DIR:PATH=C:/Users/sheldd/vcpkg/installed/x64-windows/include
+
+//Overwrite cached values read from Python library (classic search).
+// Turn off if cross-compiling and manually setting these values.
+PYBIND11_PYTHONLIBS_OVERWRITE:BOOL=ON
+
+//Python version to use for compiling modules
+PYBIND11_PYTHON_VERSION:STRING=
+
+//Path to a program.
+PYTHON_EXECUTABLE:FILEPATH=C:/Users/sheldd/AppData/Local/Microsoft/WindowsApps/python3.exe
 
 //Automatically copy dependencies into the output directory for
 // executables.
@@ -612,6 +625,9 @@ pcl_hybrid_IS_TOP_LEVEL:STATIC=ON
 //Value Computed by CMake
 pcl_hybrid_SOURCE_DIR:STATIC=C:/_LOCAL/GitHub/PC_WIN/tests/pcl_hybrid
 
+//The directory containing a CMake configuration file for pybind11.
+pybind11_DIR:PATH=C:/Users/sheldd/vcpkg/installed/x64-windows/share/pybind11
+
 //The directory containing a CMake configuration file for zstd.
 zstd_DIR:PATH=C:/Users/sheldd/vcpkg/installed/x64-windows/share/zstd
 
@@ -790,12 +806,16 @@ FIND_PACKAGE_MESSAGE_DETAILS_PCL_SEARCH:INTERNAL=[C:/Users/sheldd/vcpkg/installe
 FIND_PACKAGE_MESSAGE_DETAILS_PCL_SEGMENTATION:INTERNAL=[C:/Users/sheldd/vcpkg/installed/x64-windows/lib/pcl_segmentation.lib][C:/Users/sheldd/vcpkg/installed/x64-windows/include][v()]
 //Details about finding PNG
 FIND_PACKAGE_MESSAGE_DETAILS_PNG:INTERNAL=[optimized;C:/Users/sheldd/vcpkg/installed/x64-windows/lib/libpng16.lib;debug;C:/Users/sheldd/vcpkg/installed/x64-windows/debug/lib/libpng16d.lib][C:/Users/sheldd/vcpkg/installed/x64-windows/include][v1.6.50()]
+//Details about finding PYTHON
+FIND_PACKAGE_MESSAGE_DETAILS_PYTHON:INTERNAL=C:/Users/sheldd/AppData/Local/Microsoft/WindowsApps/python3.exe3.12.10
 //Details about finding Threads
 FIND_PACKAGE_MESSAGE_DETAILS_Threads:INTERNAL=[TRUE][v()]
 //Details about finding ZLIB
 FIND_PACKAGE_MESSAGE_DETAILS_ZLIB:INTERNAL=[optimized;C:/Users/sheldd/vcpkg/installed/x64-windows/lib/zlib.lib;debug;C:/Users/sheldd/vcpkg/installed/x64-windows/debug/lib/zlibd.lib][C:/Users/sheldd/vcpkg/installed/x64-windows/include][ ][v1.3.1()]
 //Details about finding nlohmann_json
 FIND_PACKAGE_MESSAGE_DETAILS_nlohmann_json:INTERNAL=[C:/Users/sheldd/vcpkg/installed/x64-windows/share/nlohmann_json/nlohmann_jsonConfig.cmake][v3.12.0()]
+//Test HAS_MSVC_GL_LTCG
+HAS_MSVC_GL_LTCG:INTERNAL=1
 LIBLZMA_HAS_AUTO_DECODER:INTERNAL=1
 LIBLZMA_HAS_EASY_ENCODER:INTERNAL=1
 LIBLZMA_HAS_LZMA_PRESET:INTERNAL=1
@@ -895,6 +915,18 @@ PNG_LIBRARY_DEBUG-ADVANCED:INTERNAL=1
 PNG_LIBRARY_RELEASE-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: PNG_PNG_INCLUDE_DIR
 PNG_PNG_INCLUDE_DIR-ADVANCED:INTERNAL=1
+//ADVANCED property for variable: PYTHON_EXECUTABLE
+PYTHON_EXECUTABLE-ADVANCED:INTERNAL=1
+PYTHON_INCLUDE_DIRS:INTERNAL=C:/Program Files/WindowsApps/PythonSoftwareFoundation.Python.3.12_3.12.2800.0_x64__qbz5n2kfra8p0/Include
+PYTHON_IS_DEBUG:INTERNAL=0
+PYTHON_LIBRARIES:INTERNAL=C:/Program Files/WindowsApps/PythonSoftwareFoundation.Python.3.12_3.12.2800.0_x64__qbz5n2kfra8p0/libs/python312.lib
+PYTHON_MODULE_DEBUG_POSTFIX:INTERNAL=
+PYTHON_MODULE_EXTENSION:INTERNAL=.cp312-win_amd64.pyd
+PYTHON_MODULE_PREFIX:INTERNAL=
+PYTHON_VERSION:INTERNAL=3.12.10
+PYTHON_VERSION_MAJOR:INTERNAL=3
+PYTHON_VERSION_MINOR:INTERNAL=12
+Python_ADDITIONAL_VERSIONS:INTERNAL=3.12;3.11;3.10;3.9;3.8
 //Install the dependencies listed in your manifest:
 //\n    If this is off, you will have to manually install your dependencies.
 //\n    See https://github.com/microsoft/vcpkg/tree/master/docs/specifications/manifests.md
@@ -915,4 +947,8 @@ Z_VCPKG_CHECK_MANIFEST_MODE:INTERNAL=OFF
 Z_VCPKG_POWERSHELL_PATH:INTERNAL=C:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe
 //Vcpkg root directory
 Z_VCPKG_ROOT_DIR:INTERNAL=C:/Users/sheldd/vcpkg
+_PYBIND11_CROSSCOMPILING:INTERNAL=OFF
+_Python:INTERNAL=PYTHON
+//Directories where pybind11 and possibly Python headers are located
+pybind11_INCLUDE_DIRS:INTERNAL=C:/Users/sheldd/vcpkg/installed/x64-windows/include;C:/Program Files/WindowsApps/PythonSoftwareFoundation.Python.3.12_3.12.2800.0_x64__qbz5n2kfra8p0/Include
 

@@ -1,5 +1,6 @@
 # CMake generation dependency list for this directory.
 C:/Program Files/CMake/share/cmake-4.1/Modules/CMakeCXXInformation.cmake
+C:/Program Files/CMake/share/cmake-4.1/Modules/CMakeCheckCompilerFlagCommonPatterns.cmake
 C:/Program Files/CMake/share/cmake-4.1/Modules/CMakeCommonLanguageInclude.cmake
 C:/Program Files/CMake/share/cmake-4.1/Modules/CMakeDependentOption.cmake
 C:/Program Files/CMake/share/cmake-4.1/Modules/CMakeFindDependencyMacro.cmake
@@ -11,6 +12,7 @@ C:/Program Files/CMake/share/cmake-4.1/Modules/CMakePushCheckState.cmake
 C:/Program Files/CMake/share/cmake-4.1/Modules/CMakeRCInformation.cmake
 C:/Program Files/CMake/share/cmake-4.1/Modules/CMakeSystemSpecificInformation.cmake
 C:/Program Files/CMake/share/cmake-4.1/Modules/CMakeSystemSpecificInitialize.cmake
+C:/Program Files/CMake/share/cmake-4.1/Modules/CheckCXXCompilerFlag.cmake
 C:/Program Files/CMake/share/cmake-4.1/Modules/CheckCXXSourceCompiles.cmake
 C:/Program Files/CMake/share/cmake-4.1/Modules/CheckIncludeFileCXX.cmake
 C:/Program Files/CMake/share/cmake-4.1/Modules/CheckLibraryExists.cmake
@@ -25,10 +27,13 @@ C:/Program Files/CMake/share/cmake-4.1/Modules/FindPNG.cmake
 C:/Program Files/CMake/share/cmake-4.1/Modules/FindPackageHandleStandardArgs.cmake
 C:/Program Files/CMake/share/cmake-4.1/Modules/FindPackageMessage.cmake
 C:/Program Files/CMake/share/cmake-4.1/Modules/FindPkgConfig.cmake
+C:/Program Files/CMake/share/cmake-4.1/Modules/FindPythonInterp.cmake
 C:/Program Files/CMake/share/cmake-4.1/Modules/FindThreads.cmake
 C:/Program Files/CMake/share/cmake-4.1/Modules/FindZLIB.cmake
 C:/Program Files/CMake/share/cmake-4.1/Modules/Internal/CMakeCXXLinkerInformation.cmake
 C:/Program Files/CMake/share/cmake-4.1/Modules/Internal/CMakeCommonLinkerInformation.cmake
+C:/Program Files/CMake/share/cmake-4.1/Modules/Internal/CheckCompilerFlag.cmake
+C:/Program Files/CMake/share/cmake-4.1/Modules/Internal/CheckFlagCommonConfig.cmake
 C:/Program Files/CMake/share/cmake-4.1/Modules/Internal/CheckSourceCompiles.cmake
 C:/Program Files/CMake/share/cmake-4.1/Modules/Linker/MSVC-CXX.cmake
 C:/Program Files/CMake/share/cmake-4.1/Modules/Linker/MSVC.cmake
@@ -274,6 +279,13 @@ C:/Users/sheldd/vcpkg/installed/x64-windows/share/pcl/Modules/FindFLANN.cmake
 C:/Users/sheldd/vcpkg/installed/x64-windows/share/pcl/PCLConfig.cmake
 C:/Users/sheldd/vcpkg/installed/x64-windows/share/pcl/PCLConfigVersion.cmake
 C:/Users/sheldd/vcpkg/installed/x64-windows/share/png/vcpkg-cmake-wrapper.cmake
+C:/Users/sheldd/vcpkg/installed/x64-windows/share/pybind11/FindPythonLibsNew.cmake
+C:/Users/sheldd/vcpkg/installed/x64-windows/share/pybind11/pybind11Common.cmake
+C:/Users/sheldd/vcpkg/installed/x64-windows/share/pybind11/pybind11Config.cmake
+C:/Users/sheldd/vcpkg/installed/x64-windows/share/pybind11/pybind11ConfigVersion.cmake
+C:/Users/sheldd/vcpkg/installed/x64-windows/share/pybind11/pybind11Targets.cmake
+C:/Users/sheldd/vcpkg/installed/x64-windows/share/pybind11/pybind11Tools.cmake
+C:/Users/sheldd/vcpkg/installed/x64-windows/share/pythoninterp/vcpkg-cmake-wrapper.cmake
 C:/Users/sheldd/vcpkg/installed/x64-windows/share/zlib/vcpkg-cmake-wrapper.cmake
 C:/Users/sheldd/vcpkg/installed/x64-windows/share/zstd/zstdConfig.cmake
 C:/Users/sheldd/vcpkg/installed/x64-windows/share/zstd/zstdConfigVersion.cmake
