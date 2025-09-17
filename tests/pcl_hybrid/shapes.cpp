@@ -28,6 +28,11 @@ std::string CylinderShape::toJSON() const {
     if (critical_points_) {
         for (const auto &p : *critical_points_) j["critical_points"].push_back({p.x, p.y, p.z});
     }
+    // children
+    if (!children_.empty()) {
+        j["children"] = json::array();
+        for (const auto &c : children_) j["children"].push_back(json::parse(c->toJSON()));
+    }
     return j.dump();
 }
 
@@ -47,6 +52,10 @@ std::string PlaneShape::toJSON() const {
     if (critical_points_) {
         for (const auto &p : *critical_points_) j["critical_points"].push_back({p.x, p.y, p.z});
     }
+    if (!children_.empty()) {
+        j["children"] = json::array();
+        for (const auto &c : children_) j["children"].push_back(json::parse(c->toJSON()));
+    }
     return j.dump();
 }
 
@@ -58,6 +67,10 @@ std::string GenericShape::toJSON() const {
         for (const auto& pt : points_->points) {
             j["points"].push_back({pt.x, pt.y, pt.z});
         }
+    }
+    if (!children_.empty()) {
+        j["children"] = json::array();
+        for (const auto &c : children_) j["children"].push_back(json::parse(c->toJSON()));
     }
     return j.dump();
 }

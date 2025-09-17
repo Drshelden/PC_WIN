@@ -16,8 +16,8 @@ public:
     // For plane-origin clusters, store plane label (0..2). For non-plane clusters, value is -1
     std::vector<int> clusterPlaneLabels;
     
-    // High-level shape objects (CylinderShape/PlaneShape)
-    std::vector<std::shared_ptr<class Shape>> shapeCollection;
+    // Root shape: single GenericShape that holds the whole hierarchy
+    std::shared_ptr<class GenericShape> rootShape;
 
     // Find shapes/clusters from the provided point cloud; returns 0 (OK) or negative on error
     int findShapes(const PCWin_PointCloud& pc);

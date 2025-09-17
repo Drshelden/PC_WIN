@@ -10,7 +10,8 @@
 int ShapeFinder::findShapes(const PCWin_PointCloud& pc) {
     clusters.clear();
     clusterPlaneLabels.clear();
-    shapeCollection.clear();
+    // rootShape will hold all detected shapes as children
+    rootShape.reset();
 
     using PointT = pcl::PointXYZ;
 
@@ -47,19 +48,17 @@ int ShapeFinder::findShapes(const PCWin_PointCloud& pc) {
 
     // If Stage 0 was disabled, ensure we have at least one parent shape that
     // contains the whole cloud so the rest of the pipeline runs on something.
-    if (shapeCollection.empty()) {
+    if (!rootShape) {
         // use GenericShape as a flexible root that can collect residual points
-        std::shared_ptr<GenericShape> root = std::make_shared<GenericShape>(pc.cloud);
-        shapeCollection.push_back(root);
+        rootShape = std::make_shared<GenericShape>(pc.cloud);
         // keep backwards-compatible clusters/labels lists updated
         clusters.push_back(pc.cloud);
-        // clusterPlaneLabels.push_back(-1);
     }
 
     // Stage 1: Cylinder-aware clustering (run per-parent on coarse clusters)
     // We'll iterate over the parent shapes we created earlier and run the detailed
     // plane-aware + euclidean clustering pipeline on each parent cluster to produce children.
-    for (auto &parent : shapeCollection) {
+    for (auto &parent : std::vector<std::shared_ptr<Shape>>{rootShape}) {
         // parent points
         pcl::PointCloud<PointT>::Ptr parent_cloud = parent->getPoints();
         if (!parent_cloud || parent_cloud->empty()) continue;
@@ -183,7 +182,7 @@ int ShapeFinder::findShapes(const PCWin_PointCloud& pc) {
                 int dominant_norm = -1; best_count = 0;
                 for (auto &kv : nfreq) if (kv.second > best_count) { best_count = kv.second; dominant_norm = kv.first; }
                 std::shared_ptr<Shape> child = std::make_shared<PlaneShape>(child_cloud, dominant_norm);
-                parent->addChild(child);
+                rootShape->addChild(child);
                 clusters.push_back(child_cloud);
                 clusterPlaneLabels.push_back(dominant_plane);
                 plane_used[best_plane_idx] = 1;
@@ -203,7 +202,7 @@ int ShapeFinder::findShapes(const PCWin_PointCloud& pc) {
                 int dominant_cylinder_label = -1; int cbest = 0;
                 for (auto &kv : cfreq) if (kv.second > cbest) { cbest = kv.second; dominant_cylinder_label = kv.first; }
                 std::shared_ptr<Shape> child = std::make_shared<CylinderShape>(child_cloud, dominant_cylinder_label);
-                parent->addChild(child);
+                rootShape->addChild(child);
                 clusters.push_back(child_cloud);
                 clusterPlaneLabels.push_back(dominant_cylinder_label);
             }
@@ -224,9 +223,8 @@ int ShapeFinder::findShapes(const PCWin_PointCloud& pc) {
             // them to the root GenericShape so they are preserved and visible.
             // Find the root (the first shape in shapeCollection is our root when
             // Stage 0 is disabled or no coarse clusters created).
-            if (!shapeCollection.empty()) {
-                // we expect the root to be a GenericShape; attempt dynamic_cast
-                auto root_generic = std::dynamic_pointer_cast<GenericShape>(shapeCollection.front());
+            if (rootShape) {
+                auto root_generic = rootShape;
                 if (root_generic) {
                     // construct a temporary cloud of residuals in original parent coordinates
                     pcl::PointCloud<PointT>::Ptr mapped_residual(new pcl::PointCloud<PointT>());
@@ -234,12 +232,12 @@ int ShapeFinder::findShapes(const PCWin_PointCloud& pc) {
                         mapped_residual->push_back(residual_local->at(i));
                     }
                     root_generic->appendPoints(mapped_residual);
-                } else {
+                    } else {
                     // fallback: if root isn't GenericShape, push residuals as clusters
                     for (std::size_t i = 0; i < residual_local->size(); ++i) {
                         pcl::PointCloud<PointT>::Ptr single(new pcl::PointCloud<PointT>());
                         single->push_back(residual_local->at(i));
-                        parent->addChild(std::make_shared<PlaneShape>(single));
+                        rootShape->addChild(std::make_shared<PlaneShape>(single));
                         clusters.push_back(single);
                         // clusterPlaneLabels.push_back(-1);
                     }

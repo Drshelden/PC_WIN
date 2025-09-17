@@ -6,11 +6,16 @@ VTK_INCLUDE = /usr/include/vtk-9.1
 CXX = g++
 # Base flags; optimization or debug flags are appended depending on DEBUG
 CXXFLAGS = -std=c++14 -Wall
+# Allow toggling visualization from the make command line: `make VISUALIZE=0` or `make VISUALIZE=1`
+VISUALIZE ?= 1
 ifeq ($(DEBUG),1)
 	CXXFLAGS += -g -O0
 else
 	CXXFLAGS += -O2
 endif
+
+# Pass VISUALIZE macro value to the compiler so the code can #if VISUALIZE
+CXXFLAGS += -DVISUALIZE=$(VISUALIZE)
 
 # Don't run pkg-config for trivial goals like 'clean' to avoid noisy warnings
 ifeq ($(filter clean,$(MAKECMDGOALS)),clean)
