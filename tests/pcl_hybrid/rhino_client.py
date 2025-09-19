@@ -24,30 +24,33 @@ import os
 import subprocess
 import time
 import tempfile
+import shutil
 import random
 from System.Drawing import Color
 import scriptcontext
 
 min_points_for_shape = 100  # Minimum points required to visualize a shape
 
+# Ensure Release build folder and vcpkg bin are on PATH and sys.path at import time
+try:
+    import sys
+    _br = os.path.abspath(os.path.join(os.path.dirname(__file__), 'build_py39', 'Release'))
+    _vcpkg_bin = r'C:\vcpkg\installed\x64-windows\bin'
+    if os.path.isdir(_br):
+        os.environ['PATH'] = _br + os.pathsep + _vcpkg_bin + os.pathsep + os.environ.get('PATH', '')
+        if _br not in sys.path:
+            sys.path.insert(0, _br)
+    else:
+        # try older build location
+        _alt = os.path.abspath(os.path.join(os.path.dirname(__file__), 'build', 'Debug'))
+        if os.path.isdir(_alt) and _alt not in sys.path:
+            sys.path.insert(0, _alt)
+except Exception:
+    # Do not prevent Rhino from importing this module if PATH tweak fails
+    pass
+
 class RhinoPointCloudProcessor:
-    def visualize_pipesequence(self, pipeseq, cluster_id, i):
-        """Visualize a piping sequence by reusing cylinder and torus visualization for nested shapes"""
-        print(f"  Visualizing PipeSequence (cluster {cluster_id}, shape {i+1})")
-        # PipeSequence is expected to have a 'shapes' array, each with type 'cylinder' or 'torus'
-        shapes = pipeseq.get("shapes", [])
-        for j, shape in enumerate(shapes):
-            shape_type = shape.get("type", "unknown")
-            shape_points = shape.get("points", [])
-            shape_coefficients = shape.get("coefficients", [])
-            critical_points = shape.get("critical_points", [])
-            print(f"    PipeSequence sub-shape {j+1}: {shape_type}")
-            if shape_type == "cylinder":
-                self.visualize_cylinder(shape_coefficients, critical_points, shape_points, cluster_id, f"{i+1}_{j+1}")
-            elif shape_type == "torus":
-                self.visualize_torus(shape_coefficients, critical_points, shape_points, cluster_id, f"{i+1}_{j+1}")
-            else:
-                print(f"    Unknown sub-shape type in PipeSequence: {shape_type}")
+
     def __init__(self, wsl_script_path="/mnt/c/_LOCAL/GitHub/PC_WIN/tests/pcl_hybrid/process_wsl.sh"):
         self.wsl_script_path = wsl_script_path
         # Use Windows temp directory for communication with WSL
@@ -92,67 +95,441 @@ class RhinoPointCloudProcessor:
         return points
     
     def process_pointcloud_wsl(self, points, solver_type="BEST"):
-        """Process point cloud using WSL headless processor"""
+        """
+        Process the point cloud using the built Windows Release Python bindings directly
+        (pcl_hybrid_py). This avoids calling a WSL script and runs ShapeFinder in-process.
+        Returns the same dict format as `extract_shapes_from_points` used elsewhere.
+        """
+        print(f"Processing {len(points)} points via local bindings...")
+        # Ensure Release build and vcpkg bins are on PATH and sys.path so imports and DLL loading succeed
         try:
-            print(f"Processing {len(points)} points...")
-            print(f"Solver type: {solver_type}")
-            
-            # Write points in XYZ format (space-separated x y z coordinates)
-            print(f"Writing XYZ data to {self.input_file}")
-            with open(self.input_file, 'w') as f:
-                for point in points:
-                    f.write(f"{point[0]} {point[1]} {point[2]}\n")
-            
-            print(f"XYZ file written: {os.path.getsize(self.input_file)} bytes, {len(points)} points")
-            
-            # Call WSL script with parameters (script will call the headless processor and write output to data/ws_output.json)
-            print("Calling WSL processing script...")
-            # Use bash -c to cd into the WSL project and invoke the helper script
-            cmd = ['wsl', 'bash', '-c', f'cd /home/sheldd/pcl/pcl_win && {self.wsl_script_path} "{self.input_file}"']
-            print(f"Command: {' '.join(cmd)}")
-            
-            start_time = time.time()
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
-            processing_time = time.time() - start_time
-            
-            print(f"WSL processing completed in {processing_time:.2f} seconds")
-            print(f"Return code: {result.returncode}")
-            
-            if result.stdout:
-                print(f"WSL stdout: {result.stdout}")
-            if result.stderr:
-                print(f"WSL stderr: {result.stderr}")
-            
-            if result.returncode != 0:
-                error_msg = f"WSL script failed with code {result.returncode}: {result.stderr}"
-                print(error_msg)
-                return {"error": error_msg}
-            
-            # Read results from the WSL-produced JSON via the Windows UNC path
-            if not os.path.exists(self.output_file):
-                error_msg = f"Output file not found: {self.output_file}"
-                print(error_msg)
-                return {"error": error_msg}
+            import sys
+            br = os.path.abspath(os.path.join(os.path.dirname(__file__), 'build_py39', 'Release'))
+            vcpkg_bin = r'C:\vcpkg\installed\x64-windows\bin'
+            if os.path.isdir(br):
+                # prepend so loader finds the .pyd and local DLLs first
+                os.environ['PATH'] = br + os.pathsep + vcpkg_bin + os.pathsep + os.environ.get('PATH', '')
+                if br not in sys.path:
+                    sys.path.insert(0, br)
+            else:
+                # also try the older build location
+                alt = os.path.abspath(os.path.join(os.path.dirname(__file__), 'build', 'Debug'))
+                if os.path.isdir(alt) and alt not in sys.path:
+                    sys.path.insert(0, alt)
 
-            print(f"Reading results from {self.output_file}")
-            print(f"Output file size: {os.path.getsize(self.output_file)} bytes")
-
-            with open(self.output_file, 'r') as f:
-                results = json.load(f)
-            
-            print(f"Successfully loaded JSON results")
-            return results
-            
-        except subprocess.TimeoutExpired:
-            error_msg = "WSL processing timed out (>300 seconds)"
-            print(error_msg)
-            return {"error": error_msg}
-        except json.JSONDecodeError as e:
-            error_msg = f"Failed to parse JSON results: {str(e)}"
-            print(error_msg)
-            return {"error": error_msg}
+            import pcl_hybrid_py as ph
         except Exception as e:
-            error_msg = f"Processing error: {str(e)}"
+            error_msg = f"Failed to import Release bindings (pcl_hybrid_py): {e}"
+            print(error_msg)
+            return {"error": error_msg}
+
+        # create a PCWin_PointCloud and import points via a temporary .xyz file
+        try:
+            pc = ph.PCWin_PointCloud()
+            import tempfile
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.xyz', delete=False) as tf:
+                tmpname = tf.name
+                for pt in points:
+                    tf.write(f"{float(pt[0])} {float(pt[1])} {float(pt[2])}\n")
+                tf.flush()
+            rc = pc.importPoints(tmpname)
+            # copy temp file to a stable debug location for inspection
+            try:
+                debug_copy = os.path.join(self.windows_input_dir, 'debug_last_import.xyz')
+                shutil.copy(tmpname, debug_copy)
+                print(f"Wrote debug copy of point input to: {debug_copy}")
+            except Exception as e:
+                debug_copy = None
+                print(f"Warning: could not copy tmp file for debug: {e}")
+            if rc != 0:
+                return {"error": f"importPoints failed with code {rc}"}
+        except Exception as e:
+            error_msg = f"Failed to create/import points into PCWin_PointCloud: {e}"
+            print(error_msg)
+            return {"error": error_msg}
+
+        # Debug: print number of points loaded into the PCWin_PointCloud (best-effort)
+        try:
+            point_count = None
+            # Try common accessor method names
+            for name in ('get_point_count', 'getNumPoints', 'num_points', 'getSize', 'size', 'length'):
+                fn = getattr(pc, name, None)
+                if callable(fn):
+                    try:
+                        point_count = int(fn())
+                        break
+                    except Exception:
+                        try:
+                            # maybe property-like
+                            point_count = int(getattr(pc, name))
+                            break
+                        except Exception:
+                            pass
+
+            # Try property names
+            if point_count is None:
+                for prop in ('point_count', 'num_points', 'size', 'length'):
+                    if hasattr(pc, prop):
+                        try:
+                            point_count = int(getattr(pc, prop))
+                            break
+                        except Exception:
+                            pass
+
+            # Fall back to get_points_array() if available
+            arr = None
+            gp = getattr(pc, 'get_points_array', None)
+            if point_count is None and callable(gp):
+                try:
+                    arr = gp()
+                    if arr is not None:
+                        point_count = len(arr)
+                except Exception:
+                    arr = None
+
+            # Last resort: try len(pc) or iterate a few items
+            if point_count is None:
+                try:
+                    point_count = len(pc)
+                except Exception:
+                    try:
+                        cnt = 0
+                        for _ in pc:
+                            cnt += 1
+                            if cnt > 10000:
+                                break
+                        point_count = cnt
+                    except Exception:
+                        point_count = None
+
+            print(f"PCWin_PointCloud: importPoints returned {rc}; estimated point count = {point_count if point_count is not None else 'unknown'}")
+            # Print a small sample of points if possible
+            sample = None
+            if arr is None and callable(gp):
+                try:
+                    arr = gp()
+                except Exception:
+                    arr = None
+            if arr:
+                try:
+                    sample = arr[:5]
+                except Exception:
+                    sample = None
+            if sample:
+                print("PCWin_PointCloud sample points:", sample)
+
+            # If we couldn't estimate point_count, analyze the debug copy of the xyz file
+            if point_count is None and debug_copy and os.path.isfile(debug_copy):
+                try:
+                    valid_lines = 0
+                    invalid_lines = 0
+                    parsed = []
+                    with open(debug_copy, 'r') as fh:
+                        for i, ln in enumerate(fh):
+                            s = ln.strip()
+                            if not s:
+                                continue
+                            parts = s.split()
+                            ok = True
+                            coords = []
+                            for tok in parts[:3]:
+                                try:
+                                    coords.append(float(tok))
+                                except Exception:
+                                    ok = False
+                                    break
+                            if ok and len(coords) == 3:
+                                valid_lines += 1
+                                if len(parsed) < 10:
+                                    parsed.append(coords)
+                            else:
+                                invalid_lines += 1
+                    print(f"Debug file analysis: {valid_lines} valid numeric lines, {invalid_lines} invalid/ignored lines")
+                    if parsed:
+                        print("First parsed points from debug file:", parsed[:5])
+                except Exception as e:
+                    print("Failed to analyze debug input file:", e)
+        except Exception as e:
+            print("Debug: unable to determine point count/sample:", e)
+
+        # run shape finding
+        try:
+            sf = ph.ShapeFinder()
+            print("Calling ShapeFinder.findShapes(pc)...")
+            sf.findShapes(pc)
+        except Exception as e:
+            error_msg = f"ShapeFinder failed: {e}"
+            print(error_msg)
+            return {"error": error_msg}
+
+        # Prefer the JSON root when available (example.py uses get_root_json and shows populated points)
+        try:
+            get_root_json = getattr(sf, 'get_root_json', None)
+            if callable(get_root_json):
+                raw = None
+                try:
+                    raw = get_root_json()
+                except Exception as e:
+                    print("get_root_json() call failed:", e)
+                    raw = None
+
+                if raw:
+                    if isinstance(raw, bytes):
+                        raw = raw.decode('utf-8', errors='replace')
+
+                    # write raw JSON to debug file
+                    try:
+                        json_dbg = os.path.join(self.windows_input_dir, 'debug_root_json.json')
+                        with open(json_dbg, 'w', encoding='utf-8') as jf:
+                            jf.write(raw)
+                        print(f"Wrote root JSON debug file to: {json_dbg}")
+                    except Exception as e:
+                        print("Failed to write root JSON debug file:", e)
+
+                    try:
+                        parsed = json.loads(raw)
+                    except Exception as e:
+                        print("Failed to parse get_root_json():", e)
+                    else:
+                        # convert parsed GenericShape tree into flat results dict
+                        results_from_json = {'planes': [], 'cylinders': []}
+
+                        def walk_json(node):
+                            if not isinstance(node, dict):
+                                return
+                            typ = node.get('type', '').lower()
+                            coeffs = node.get('coefficients') or node.get('coeff') or node.get('coefs') or None
+                            cps = node.get('critical_points') or node.get('criticalPoints') or node.get('critical') or []
+                            pts = node.get('points') or node.get('shape_points') or node.get('shapePoints') or []
+                            entry = {
+                                'coefficients': coeffs,
+                                'critical_points': cps,
+                                'shape_points': pts,
+                                'cluster_id': node.get('cluster_id') or node.get('cluster') or None
+                            }
+                            if 'plane' in typ:
+                                results_from_json['planes'].append(entry)
+                            elif 'cylinder' in typ:
+                                results_from_json['cylinders'].append(entry)
+                            # recurse children
+                            for c in node.get('children', []) or []:
+                                walk_json(c)
+
+                        # top-level may be a wrapper with 'children'
+                        if isinstance(parsed, dict):
+                            if 'children' in parsed:
+                                for c in parsed.get('children', []) or []:
+                                    walk_json(c)
+                            else:
+                                walk_json(parsed)
+
+                        if len(results_from_json['planes']) > 0 or len(results_from_json['cylinders']) > 0:
+                            print(f"Parsed root JSON -> found {len(results_from_json['planes'])} planes and {len(results_from_json['cylinders'])} cylinders")
+                            return results_from_json
+        except Exception as e:
+            print("get_root_json probe failed:", e)
+
+        # walk the root shape tree and collect planes/cylinders (robust diagnostics)
+        def collect_shapes(shape, cluster_id=None):
+            out = {'planes': [], 'cylinders': []}
+            verbose = []
+
+            def safe_listify(fn_or_val):
+                # Accept either a callable getter or a value; try to convert iterables to list of lists
+                try:
+                    if callable(fn_or_val):
+                        val = fn_or_val()
+                    else:
+                        val = fn_or_val
+                    if val is None:
+                        return []
+                    # If it's already a list/tuple, try to coerce nested items to lists
+                    if isinstance(val, (list, tuple)):
+                        return [list(x) if not isinstance(x, (int, float, str)) else [x] for x in val]
+                    # Try to iterate
+                    return [list(x) for x in val]
+                except Exception:
+                    try:
+                        return list(fn_or_val)
+                    except Exception:
+                        return []
+
+            def walk(sh, cid=None, depth=0):
+                try:
+                    raw_t = None
+                    try:
+                        raw_t = sh.get_type()
+                    except Exception:
+                        raw_t = None
+                    t = (str(raw_t) if raw_t is not None else '').lower().strip()
+
+                    # gather getters robustly
+                    coeffs = None
+                    try:
+                        coeffs = sh.get_coefficients()
+                    except Exception:
+                        coeffs = None
+
+                    # Probe multiple getter names/strategies for critical points and shape points
+                    cps = []
+                    cps_getter = None
+                    for cand in ('get_critical_points_array', 'getCriticalPoints', 'critical_points', 'get_critical_points', 'getCriticalPointsArray'):
+                        fn = getattr(sh, cand, None)
+                        if callable(fn):
+                            try:
+                                val = fn()
+                                lst = safe_listify(val)
+                                if lst:
+                                    cps = lst
+                                    cps_getter = cand
+                                    break
+                            except Exception:
+                                continue
+
+                    pts = []
+                    pts_getter = None
+                    for cand in ('get_points_array', 'getPointsArray', 'get_points', 'getPoints', 'get_points_array_ptr', 'points'):
+                        fn = getattr(sh, cand, None)
+                        if callable(fn):
+                            try:
+                                val = fn()
+                                lst = safe_listify(val)
+                                if lst:
+                                    pts = lst
+                                    pts_getter = cand
+                                    break
+                            except Exception:
+                                continue
+
+                    # as fallback try iteration over sh (some wrappers yield points)
+                    if not pts:
+                        try:
+                            tmp = []
+                            for i, x in enumerate(sh):
+                                if i >= 1000:
+                                    break
+                                try:
+                                    tmp.append(list(x))
+                                except Exception:
+                                    tmp.append(repr(x))
+                            if tmp:
+                                pts = tmp
+                                pts_getter = 'iter(sh)'
+                        except Exception:
+                            pass
+
+                    info = {
+                        'type': t if t else '<unknown>',
+                        'raw_type': repr(raw_t),
+                        'n_critical_points': len(cps),
+                        'n_shape_points': len(pts),
+                        'critical_points_getter': cps_getter,
+                        'shape_points_getter': pts_getter,
+                        'has_coefficients': coeffs is not None,
+                        'coefficients_repr': repr(coeffs) if coeffs is not None else None,
+                        'cluster_id': cid,
+                        'sample_critical_points': cps[:5] if cps else [],
+                        'sample_shape_points': pts[:5] if pts else [],
+                    }
+                    verbose.append(info)
+
+                    # Print a concise per-shape diagnostic line
+                    print(('  ' * depth) + f"Collected shape: type={info['type']}, pts={info['n_shape_points']}, critical={info['n_critical_points']}, coeffs_present={info['has_coefficients']}")
+
+                    entry = {
+                        'coefficients': coeffs,
+                        'critical_points': cps,
+                        'shape_points': pts,
+                        'cluster_id': cid
+                    }
+
+                    if t == 'plane':
+                        out['planes'].append(entry)
+                    elif t == 'cylinder':
+                        out['cylinders'].append(entry)
+
+                except Exception as e:
+                    # Log but continue traversal
+                    print(('  ' * depth) + f"Error collecting shape at depth {depth}: {e}")
+
+                # recurse
+                try:
+                    children = []
+                    try:
+                        children = sh.get_children() or []
+                    except Exception:
+                        children = []
+                    for c in children:
+                        walk(c, cid, depth+1)
+                except Exception:
+                    pass
+
+            walk(shape, cluster_id)
+
+            # write verbose debug JSON next to other debug files
+            try:
+                dbg_json2 = os.path.join(self.windows_input_dir, 'debug_shapes_verbose.json')
+                with open(dbg_json2, 'w') as jf:
+                    json.dump({'summary': {'planes': len(out['planes']), 'cylinders': len(out['cylinders'])}, 'verbose': verbose, 'raw': out}, jf, indent=2, default=lambda o: repr(o))
+                print(f"Wrote verbose shapes debug JSON to: {dbg_json2}")
+            except Exception as e:
+                print("Failed to write verbose debug JSON:", e)
+
+            return out
+
+        try:
+            root = sf.get_root_shape()
+            if root is not None:
+                # additional diagnostics: inspect root and children counts
+                try:
+                    def dump_shape_info(sh, depth=0):
+                        try:
+                            t = sh.get_type()
+                        except Exception:
+                            t = '<unknown>'
+                        # try to get points and critical points lengths
+                        n_pts = None
+                        n_cps = None
+                        try:
+                            parr = sh.get_points_array()
+                            if parr is not None:
+                                n_pts = len(parr)
+                        except Exception:
+                            n_pts = None
+                        try:
+                            cparr = sh.get_critical_points_array()
+                            if cparr is not None:
+                                n_cps = len(cparr)
+                        except Exception:
+                            n_cps = None
+                        print(('  ' * depth) + f"Shape type={t}, points={n_pts if n_pts is not None else 'unknown'}, critical_points={n_cps if n_cps is not None else 'unknown'}")
+                        try:
+                            children = sh.get_children() or []
+                            for c in children:
+                                dump_shape_info(c, depth+1)
+                        except Exception:
+                            pass
+                    print("Root shape diagnostics:")
+                    dump_shape_info(root, 0)
+                except Exception as e:
+                    print("Failed to dump root diagnostics:", e)
+
+                results = collect_shapes(root)
+            else:
+                results = {'planes': [], 'cylinders': []}
+            print(f"Processed points via bindings, found {len(results['planes'])} planes and {len(results['cylinders'])} cylinders")
+            # If no shapes found, write the raw results to a debug JSON for inspection
+            if len(results.get('planes', [])) == 0 and len(results.get('cylinders', [])) == 0:
+                try:
+                    dbg_json = os.path.join(self.windows_input_dir, 'debug_shapes.json')
+                    with open(dbg_json, 'w') as jf:
+                        json.dump(results, jf, indent=2)
+                    print(f"Wrote empty-shapes debug JSON to: {dbg_json}")
+                except Exception as e:
+                    print("Failed to write debug shapes JSON:", e)
+            return results
+        except Exception as e:
+            error_msg = f"Error collecting shapes: {e}"
             print(error_msg)
             return {"error": error_msg}
     
@@ -161,11 +538,12 @@ class RhinoPointCloudProcessor:
             print(f"  Skipping plane visualization due to insufficient points ({len(shape_points)} < {min_points_for_shape})")
             return
         shape_type="plane"
+        created = []
         if len(shape_points) > 0:
             # color will be assigned by caller based on plane_label
             point_cloud_guid = self.add_pointcloud_to_rhino(shape_points, "plane", cluster_id, i)
             if point_cloud_guid:
-                # created_objects.append(guid)
+                created.append(point_cloud_guid)
                 print(f"  Added {shape_type} point cloud to Rhino ({len(shape_points)} points)")
 
         """Create transparent plane surface and yellow boundary polygon from critical points"""
@@ -205,42 +583,45 @@ class RhinoPointCloudProcessor:
             breps = rg.Brep.CreatePlanarBreps([boundary_curve], 0.001)
             if breps and len(breps) > 0:
                 plane_surface = breps[0]
-            if plane_surface:
-                # Add transparent white plane surface
-                surface_guid = scriptcontext.doc.Objects.AddBrep(plane_surface)
-                if surface_guid:
-                    rs.ObjectColor(surface_guid, Color.White)
-                    rs.ObjectMaterialIndex(surface_guid, -1)  # Use default material
-                    # Make transparent (this might need to be done differently in Rhino)
-                    cluster_str = str(cluster_id)
-                    count_str = str(i)
-                    rs.ObjectName(surface_guid, f"Plane_Cluster{cluster_str}_Shape{count_str}_Surface")
-                    # created_objects.append(surface_guid)
-                    print(f"  Added plane surface")
+                if plane_surface:
+                    # Add transparent white plane surface
+                    surface_guid = scriptcontext.doc.Objects.AddBrep(plane_surface)
+                    if surface_guid:
+                        created.append(surface_guid)
+                        rs.ObjectColor(surface_guid, Color.White)
+                        rs.ObjectMaterialIndex(surface_guid, -1)  # Use default material
+                        # Make transparent (this might need to be done differently in Rhino)
+                        cluster_str = str(cluster_id)
+                        count_str = str(i)
+                        rs.ObjectName(surface_guid, f"Plane_Cluster{cluster_str}_Shape{count_str}_Surface")
+                        print(f"  Added plane surface")
             
-            if boundary_curve:
-                # Add boundary curve colored according to plane label (caller will recolor the point cloud)
-                boundary_guid = scriptcontext.doc.Objects.AddCurve(boundary_curve)
-                if boundary_guid:
-                    # default yellow if caller doesn't change it
-                    rs.ObjectColor(boundary_guid, Color.Yellow)
-                    rs.ObjectPrintWidth(boundary_guid, 0.01)  # 1px width
-                    cluster_str = str(cluster_id)
-                    count_str = str(i)
-                    rs.ObjectName(boundary_guid, f"Plane_Cluster{cluster_str}_Shape{count_str}_Boundary")
-                    # created_objects.append(boundary_guid)
-                    print(f"  Added plane boundary")
+                if boundary_curve:
+                    # Add boundary curve colored according to plane label (caller will recolor the point cloud)
+                    boundary_guid = scriptcontext.doc.Objects.AddCurve(boundary_curve)
+                    if boundary_guid:
+                        created.append(boundary_guid)
+                        # default yellow if caller doesn't change it
+                        rs.ObjectColor(boundary_guid, Color.Yellow)
+                        rs.ObjectPrintWidth(boundary_guid, 0.01)  # 1px width
+                        cluster_str = str(cluster_id)
+                        count_str = str(i)
+                        rs.ObjectName(boundary_guid, f"Plane_Cluster{cluster_str}_Shape{count_str}_Boundary")
+                        print(f"  Added plane boundary")
+
+        return created
     
     def visualize_cylinder(self, coefficients, critical_points, shape_points, cluster_id, i):
         if len(shape_points) < min_points_for_shape:
             print(f"  Skipping cylinder visualization due to insufficient points ({len(shape_points)} < {min_points_for_shape})")
             return
         shape_type="cylider"
+        created = []
         if len(shape_points) > 0:
             # color will be assigned by caller based on cylinder_label
             point_cloud_guid = self.add_pointcloud_to_rhino(shape_points, "cylinder", cluster_id, i)
             if point_cloud_guid:
-                # created_objects.append(guid)
+                created.append(point_cloud_guid)
                 print(f"  Added {shape_type} point cloud to Rhino ({len(shape_points)} points)")
 
         """Create transparent cylinder surface and red axis line from critical points"""
@@ -286,24 +667,26 @@ class RhinoPointCloudProcessor:
             # Add transparent white cylinder surface
             surface_guid = scriptcontext.doc.Objects.AddBrep(cylinder_surface)
             if surface_guid:
+                created.append(surface_guid)
                 rs.ObjectColor(surface_guid, Color.White)
                 cluster_str = str(cluster_id)
                 count_str = str(i)
                 rs.ObjectName(surface_guid, f"Cylinder_Cluster{cluster_str}_Shape{count_str}_Surface")
-                # created_objects.append(surface_guid)
                 print(f"  Added cylinder surface")
         
         if axis_curve:
             # Add thick red axis line
             axis_guid = scriptcontext.doc.Objects.AddCurve(axis_curve)
             if axis_guid:
+                created.append(axis_guid)
                 rs.ObjectColor(axis_guid, Color.Red)
                 rs.ObjectPrintWidth(axis_guid, 2.0)  # Thick line
                 cluster_str = str(cluster_id)
                 count_str = str(i)
                 rs.ObjectName(axis_guid, f"Cylinder_Cluster{cluster_str}_Shape{count_str}_Axis")
-                # created_objects.append(axis_guid)
                 print(f"  Added cylinder axis")
+
+        return created
     
     def visualize_cone(self, coefficients, critical_points, shape_points, cluster_id, i):
         shape_type="cone"
@@ -516,6 +899,30 @@ class RhinoPointCloudProcessor:
         # Try multiple fallbacks for compatibility
         root = results
 
+        created_objects = []
+
+        # If results are in flat format with 'planes'/'cylinders', iterate directly
+        if isinstance(results, dict) and ("planes" in results or "cylinders" in results):
+            for i, p in enumerate(results.get('planes', [])):
+                coeffs = p.get('coefficients')
+                cps = p.get('critical_points', [])
+                pts = p.get('shape_points', [])
+                cid = p.get('cluster_id', 0)
+                guids = self.visualize_plane(coeffs, cps, pts, cid, i)
+                if guids:
+                    created_objects.extend(guids)
+
+            for i, c in enumerate(results.get('cylinders', [])):
+                coeffs = c.get('coefficients')
+                cps = c.get('critical_points', [])
+                pts = c.get('shape_points', [])
+                cid = c.get('cluster_id', 0)
+                guids = self.visualize_cylinder(coeffs, cps, pts, cid, i)
+                if guids:
+                    created_objects.extend(guids)
+
+            return created_objects
+
 
 
         # Color mapping helpers consistent with main.cpp
@@ -542,7 +949,7 @@ class RhinoPointCloudProcessor:
                 return Color.FromArgb(200, 200, 200)
 
         # Recursive traversal
-        def traverse_node(node, cluster_id=0, depth=0, idx_prefix=""):
+        def traverse_node(node, cluster_id=0, depth=0, idx_prefix="", created_objects=None):
             if node is None:
                 return
             ntype = node.get("type", "generic")
@@ -556,29 +963,31 @@ class RhinoPointCloudProcessor:
 
             if ntype == "plane":
                 color = plane_color_for_label(plane_label)
-                # add points with color
-                self.add_pointcloud_to_rhino(pts, "plane", cluster_id, id_str, color=color)
-                # draw hull and boundary
-                self.visualize_plane(coeffs, cps, pts, cluster_id, id_str)
+                # visualize plane (this will add point cloud, surface, and boundary)
+                guids = self.visualize_plane(coeffs, cps, pts, cluster_id, id_str)
+                if guids and created_objects is not None:
+                    created_objects.extend(guids)
                 # recolor boundary appropriately
                 # recolor logic happens inside visualize_plane's boundary creation
             elif ntype == "cylinder":
                 color = cylinder_color_for_label(cyl_label)
-                self.add_pointcloud_to_rhino(pts, "cylinder", cluster_id, id_str, color=color)
-                self.visualize_cylinder(coeffs, cps, pts, cluster_id, id_str)
+                guids = self.visualize_cylinder(coeffs, cps, pts, cluster_id, id_str)
+                if guids and created_objects is not None:
+                    created_objects.extend(guids)
             else:
                 # generic: add points in gray
                 if pts:
-                    self.add_pointcloud_to_rhino(pts, "generic", cluster_id, id_str, color=Color.FromArgb(128,128,128))
+                    guid = self.add_pointcloud_to_rhino(pts, "generic", cluster_id, id_str, color=Color.FromArgb(128,128,128))
+                    if guid and created_objects is not None:
+                        created_objects.append(guid)
 
             # recurse into children
             children = node.get("children", [])
             for i, c in enumerate(children):
-                traverse_node(c, cluster_id, depth+1, f"{id_str}.{i}")
+                traverse_node(c, cluster_id, depth+1, f"{id_str}.{i}", created_objects)
+        traverse_node(root, 0, 0, "0", created_objects)
 
-        traverse_node(root, 0, 0, "0")
-
-        return []
+        return created_objects
 
 
 def run_pcl_processing(solver_type):

@@ -29,6 +29,104 @@ LOAD_UNSUPPORTED_FORMAT = -2
 LOAD_PARSE_ERROR = -3
 
 
+
+def extract_shapes_from_points(points):
+    """
+    Given a list of [x, y, z] points, run ShapeFinder and return a dict:
+    {
+        'planes': [
+            {
+                'coefficients': [...],
+                'critical_points': [...],
+                'shape_points': [...],
+                'cluster_id': int
+            }, ...
+        ],
+        'cylinders': [
+            {
+                'coefficients': [...],
+                'critical_points': [...],
+                'shape_points': [...],
+                'cluster_id': int
+            }, ...
+        ]
+    }
+    """
+    import numpy as np
+    pc = ph.PCWin_PointCloud()
+    arr = np.array(points, dtype=np.float32)
+    # create a temporary Nx3 .xyz file in memory
+    import tempfile
+    with tempfile.NamedTemporaryFile(mode='w+', suffix='.xyz', delete=False) as tf:
+        for pt in arr:
+            tf.write(f"{pt[0]} {pt[1]} {pt[2]}\n")
+        tf.flush()
+        rc = pc.importPoints(tf.name)
+    # run shape finding
+    sf = ph.ShapeFinder()
+    sf.findShapes(pc)
+    # walk the root shape tree and collect planes/cylinders
+    def collect_shapes(shape, cluster_id=None):
+        out = {'planes': [], 'cylinders': []}
+        def walk(sh, cid=None):
+            t = sh.get_type()
+            if t == 'plane':
+                entry = {
+                    'coefficients': sh.get_coefficients(),
+                    'critical_points': np.asarray(sh.get_critical_points_array()).tolist(),
+                    'shape_points': np.asarray(sh.get_points_array()).tolist(),
+                    'cluster_id': cid
+                }
+                out['planes'].append(entry)
+            elif t == 'cylinder':
+                entry = {
+                    'coefficients': sh.get_coefficients(),
+                    'critical_points': np.asarray(sh.get_critical_points_array()).tolist(),
+                    'shape_points': np.asarray(sh.get_points_array()).tolist(),
+                    'cluster_id': cid
+                }
+                out['cylinders'].append(entry)
+            # recurse
+            for c in sh.get_children():
+                walk(c, cid)
+        walk(shape, cluster_id)
+        return out
+    root = sf.get_root_shape()
+    if root is not None:
+        return collect_shapes(root)
+    return {'planes': [], 'cylinders': []}
+
+def traverse_shape(shape, depth=0):
+    if shape is None:
+        return
+    indent = '  ' * depth
+    t = shape.get_type()
+    print(f"{indent}Shape type: {t}")
+    # try to get concise metadata
+    try:
+        coeff = shape.get_coefficients()
+        if coeff is not None:
+            print(f"{indent} coefficients: {coeff}")
+    except Exception:
+        pass
+    try:
+        cps = shape.get_critical_points_array()
+        if cps is not None:
+            import numpy as _np
+            _arr = _np.asarray(cps)
+            print(f"{indent} critical points: shape={_arr.shape}")
+    except Exception:
+        pass
+    try:
+        children = shape.get_children()
+        if children:
+            print(f"{indent} children: {len(children)}")
+            for c in children:
+                traverse_shape(c, depth+1)
+    except Exception:
+        pass
+
+
 def main(argv):
     if len(argv) < 2:
         print(f"Usage: {argv[0]} input.(pcd|xyz|e57) [export.json]")
@@ -58,6 +156,29 @@ def main(argv):
     sf = ph.ShapeFinder()
     rc2 = sf.findShapes(pc)
     print('Found', sf.clusters_size(), 'clusters in total')
+
+    # Demonstrate structured dtype cluster arrays (x,y,z,nx,ny,nz)
+    try:
+        import numpy as np
+        for i in range(sf.clusters_size()):
+            sarr = sf.get_cluster_structured(pc, i)
+            np_sarr = np.asarray(sarr)
+            print(f'Cluster {i}: structured array shape {np_sarr.shape}, dtype={np_sarr.dtype}')
+            if np_sarr.size:
+                print('  first row sample:', np_sarr[0])
+    except Exception as e:
+        print('Structured array demo failed:', e)
+
+    # Retrieve root shape and traverse it for a concise tree dump
+    try:
+        root = sf.get_root_shape()
+        if root is not None:
+            print('\nTraversing root shape:')
+            traverse_shape(root)
+        else:
+            print('No root shape available')
+    except Exception as e:
+        print('Error retrieving/traversing root shape:', e)
 
     if len(argv) > 2:
         export_file = argv[2]

@@ -1,6 +1,8 @@
 {
     "version": "0.2.0",
     "configurations": [
+
+        
         {
             "name": "Debug main (WSL)",
             "type": "cppdbg",
@@ -29,6 +31,20 @@
                     "ignoreFailures": true
                 }
             ]
+        }
+        ,
+        {
+            "name": "Python: Run pcl_hybrid main.py (quad.xyz)",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/tests/pcl_hybrid/main.py",
+            "args": ["${workspaceFolder}/tests/pcl_hybrid/data/quad.xyz"],
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/tests/pcl_hybrid",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}\\tests\\pcl_hybrid\\build_py39\\Release;${env:PYTHONPATH}",
+                "PATH": "${workspaceFolder}\\tests\\pcl_hybrid\\build_py39\\Release;C:\\vcpkg\\installed\\x64-windows\\bin;${env:PATH}"
+            }
         }
     ]
 }

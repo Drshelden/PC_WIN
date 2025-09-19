@@ -1,0 +1,36 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "CMake: Configure Release",
+      "type": "shell",
+      "command": "cmake -S . -B build_py39 -DCMAKE_TOOLCHAIN_FILE=\"C:\\vcpkg\\scripts\\buildsystems\\vcpkg.cmake\" -DBUILD_PYTHON=ON -DPython3_ROOT_DIR=\"C:\\Program Files\\Python39\" -DPYTHON_EXECUTABLE=\"C:\\Program Files\\Python39\\python.exe\" -DPYTHON_INCLUDE_DIR=\"C:\\Program Files\\Python39\\include\" -DPYTHON_LIBRARY=\"C:\\Program Files\\Python39\\libs\\python39.lib\" -DCMAKE_BUILD_TYPE=Release",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "CMake: Build Release",
+      "type": "shell",
+      "command": "cmake --build build_py39 --config Release --target pcl_hybrid_py",
+      "group": "build",
+      "dependsOn": "CMake: Configure Release",
+      "problemMatcher": []
+    },
+    {
+      "label": "Run pcl_hybrid_py test (Release)",
+      "type": "shell",
+      "command": "python tests/pcl_hybrid/runtests.py",
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "options": {
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}\\tests\\pcl_hybrid\\build_py39\\Release;${env:PYTHONPATH}",
+          "PATH": "${workspaceFolder}\\tests\\pcl_hybrid\\build_py39\\Release;C:\\vcpkg\\installed\\x64-windows\\bin;${env:PATH}"
+        }
+      },
+      "problemMatcher": []
+    }
+  ]
+}

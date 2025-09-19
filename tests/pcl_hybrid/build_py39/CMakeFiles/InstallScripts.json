@@ -1,0 +1,7 @@
+{
+	"InstallScripts" : 
+	[
+		"C:/_LOCAL/GitHub/PC_WIN/tests/pcl_hybrid/build_py39/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

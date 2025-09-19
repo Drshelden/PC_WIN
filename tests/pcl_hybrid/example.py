@@ -2,7 +2,7 @@
 from pcl_hybrid_py import PCWin_PointCloud, ShapeFinder
 
 pc = PCWin_PointCloud()
-res = pc.importPoints('data/example.pcd')
+res = pc.importPoints('/_LOCAL/GitHub/PC_WIN/tests/pcl_hybrid/data/tmp.xyz')
 print('importPoints returned', res)
 
 sf = ShapeFinder()

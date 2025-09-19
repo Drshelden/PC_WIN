@@ -16,6 +16,9 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <nlohmann/json.hpp>
+using json = nlohmann::json;
+// To install: vcpkg install nlohmann-json
 #include <algorithm>
 #include <thread>
 #include <chrono>
