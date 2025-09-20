@@ -127,6 +127,20 @@ PYBIND11_MODULE(pcl_hybrid_py, m) {
     py::class_<PCWin_PointCloud>(m, "PCWin_PointCloud")
         .def(py::init<>())
         .def("importPoints", &PCWin_PointCloud::importPoints, "Import points from file")
+        .def("importPointsFromBuffer", [](PCWin_PointCloud &pc, py::buffer b){
+            // Accepts a buffer/ndarray of float32, shape (N,3) or flat length 3*N
+            py::buffer_info info = b.request();
+            if (info.format != py::format_descriptor<float>::format() && info.format != "f")
+                throw std::runtime_error("importPointsFromBuffer requires float32 buffer");
+            ssize_t len = 1;
+            for (auto d : info.shape) len *= d;
+            if (len % 3 != 0) throw std::runtime_error("buffer length must be multiple of 3 (x,y,z)");
+            size_t n_points = (size_t)(len / 3);
+            // ensure contiguous
+            py::array_t<float> arr = py::array_t<float>(info.shape, info.strides, (float*)info.ptr).attr("copy")();
+            float *data = arr.mutable_data();
+            return pc.importPointsFromBuffer(data, n_points);
+        }, "Import points from an in-memory float32 buffer (x,y,z repeating)")
         .def("get_points_array", [](const PCWin_PointCloud &pc){ return pointcloud_to_numpy(pc.cloud); }, "Return point cloud as Nx3 numpy array")
         .def("get_points_and_normals", [](const PCWin_PointCloud &pc){
             // if normals are present and match cloud size, produce Nx6 array, otherwise Nx3
