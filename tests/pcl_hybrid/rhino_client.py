@@ -29,7 +29,10 @@ import shutil
 import random
 from System.Drawing import Color
 import scriptcontext
-import numpy
+try:
+    import numpy as np
+except Exception:
+    np = None
 
 min_points_for_shape = 100  # Minimum points required to visualize a shape
 
@@ -164,7 +167,88 @@ class RhinoPointCloudProcessor:
             print(error_msg)
             return {"error": error_msg}
 
-        # Use get_root_json() as the single source of truth for shapes
+        # First try: traverse the Shape tree directly via the ShapeFinder bindings
+        try:
+            get_root_shape = getattr(sf, 'get_root_shape', None)
+            if callable(get_root_shape):
+                root = get_root_shape()
+                if root is not None:
+                    results_from_shapes = {'planes': [], 'cylinders': []}
+
+                    def walk_shape(node):
+                        try:
+                            ntype = node.get_type().lower()
+                        except Exception:
+                            ntype = ''
+
+                        # coefficients (if available)
+                        coeffs = None
+                        try:
+                            if hasattr(node, 'get_coefficients'):
+                                coeffs = node.get_coefficients()
+                        except Exception:
+                            coeffs = None
+
+                        # critical points (numpy array or list)
+                        cps = []
+                        try:
+                            if hasattr(node, 'get_critical_points_array'):
+                                cp = node.get_critical_points_array()
+                                if np is not None and hasattr(cp, 'tolist'):
+                                    cps = cp.tolist()
+                                else:
+                                    # fallback: attempt list conversion
+                                    try:
+                                        cps = list(map(list, cp))
+                                    except Exception:
+                                        cps = []
+                        except Exception:
+                            cps = []
+
+                        # shape points (prefer numpy array when available)
+                        pts = []
+                        try:
+                            if hasattr(node, 'get_points_array'):
+                                pa = node.get_points_array()
+                                if np is not None and hasattr(pa, 'tolist'):
+                                    # keep numpy array available for downstream use, but also
+                                    # produce a Python list for Rhino geometry creation
+                                    pts = pa.tolist()
+                                else:
+                                    try:
+                                        pts = list(map(list, pa))
+                                    except Exception:
+                                        pts = []
+                        except Exception:
+                            pts = []
+
+                        entry = {
+                            'coefficients': coeffs,
+                            'critical_points': cps,
+                            'shape_points': pts,
+                            'cluster_id': None
+                        }
+
+                        if 'plane' in ntype:
+                            results_from_shapes['planes'].append(entry)
+                        elif 'cylinder' in ntype:
+                            results_from_shapes['cylinders'].append(entry)
+
+                        # recurse children
+                        try:
+                            children = node.get_children() or []
+                            for c in children:
+                                walk_shape(c)
+                        except Exception:
+                            pass
+
+                    walk_shape(root)
+                    return results_from_shapes
+        except Exception:
+            # If anything fails, fall back to the JSON path below
+            pass
+
+        # Fallback: use get_root_json() as the single source of truth for shapes
         try:
             get_root_json = getattr(sf, 'get_root_json', None)
             if not callable(get_root_json):
