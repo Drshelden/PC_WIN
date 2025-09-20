@@ -607,23 +607,42 @@ class RhinoPointCloudProcessor:
         
         # Convert points to Rhino Point3d objects
         rhino_points = []
-        for pt in points:
+
+        # If NumPy is available and points is an ndarray, iterate efficiently
+        try:
+            if np is not None and hasattr(points, 'ndim') and getattr(points, 'ndim') == 2:
+                # Expect shape (N, >=3)
+                for i in range(points.shape[0]):
+                    x = float(points[i, 0]); y = float(points[i, 1]); z = float(points[i, 2])
+                    rhino_points.append(rg.Point3d(x, y, z))
+            else:
+                for pt in points:
+                    try:
+                        if isinstance(pt, (list, tuple)) and len(pt) >= 3:
+                            # Standard [x, y, z] format
+                            rhino_points.append(rg.Point3d(float(pt[0]), float(pt[1]), float(pt[2])))
+                        elif isinstance(pt, (list, tuple)) and len(pt) == 1:
+                            # Single coordinate - likely an error in data format, skip these
+                            continue
+                        elif isinstance(pt, (int, float)):
+                            # Single number - likely an error in data format, skip these
+                            continue
+                        else:
+                            print(f"  Warning: Unrecognized point format: {pt}")
+                    except (ValueError, IndexError) as e:
+                        print(f"  Warning: Could not convert point {pt}: {e}")
+                        continue
+
+        except Exception:
+            # Fallback to safe iteration over Python sequences
             try:
-                if isinstance(pt, list) and len(pt) >= 3:
-                    # Standard [x, y, z] format
-                    rhino_points.append(rg.Point3d(float(pt[0]), float(pt[1]), float(pt[2])))
-                elif isinstance(pt, list) and len(pt) == 1:
-                    # Single coordinate - likely an error in data format, skip these
-                    continue
-                elif isinstance(pt, (int, float)):
-                    # Single number - likely an error in data format, skip these
-                    continue
-                else:
-                    print(f"  Warning: Unrecognized point format: {pt}")
-            except (ValueError, IndexError) as e:
-                print(f"  Warning: Could not convert point {pt}: {e}")
-                continue
-        
+                for pt in points:
+                    if len(pt) >= 3:
+                        rhino_points.append(rg.Point3d(float(pt[0]), float(pt[1]), float(pt[2])))
+            except Exception:
+                print("  Warning: Failed to iterate points input; aborting")
+                return None
+
         if len(rhino_points) == 0:
             print(f"  Warning: No valid points for {shape_type} shape")
             return None
