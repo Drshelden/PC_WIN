@@ -2,7 +2,7 @@
 #include <Eigen/Dense>
 #include <cmath>
 
-#define angle_tolerance_deg 2.0f
+#include "Settings.h"
 
 PlaneAwareRegionGrowing::PlaneAwareRegionGrowing(const std::vector<int>& labels,
                                                  pcl::PointCloud<pcl::Normal>::ConstPtr norms)
@@ -31,7 +31,18 @@ bool PlaneAwareRegionGrowing::validatePoint(pcl::index_t /*initial_seed*/, pcl::
     // Compare normals in a direction-agnostic way: use absolute dot so n and -n are treated equal
     float raw_dot = n1.dot(n2);
     float abs_dot = std::max(-1.0f, std::min(1.0f, std::fabs(raw_dot)));
-    float cos_thresh = std::cos(angle_tolerance_deg / 180.0f * static_cast<float>(M_PI));
+    // Retrieve angle tolerance (degrees) from global settings if available
+    float angle_tolerance = 5.0f;
+    try {
+        if (_SETTINGS.contains("general") && _SETTINGS["general"].contains("angle_tolerance_deg")) {
+            angle_tolerance = static_cast<float>(_SETTINGS["general"]["angle_tolerance_deg"].get<double>());
+        } else {
+            std::cout << "[Settings] general.angle_tolerance_deg missing: using default " << angle_tolerance << " deg\n";
+        }
+    } catch (const std::exception &ex) {
+        std::cout << "[Settings] general.angle_tolerance_deg invalid: using default " << angle_tolerance << " deg (" << ex.what() << ")\n";
+    }
+    float cos_thresh = std::cos(angle_tolerance / 180.0f * static_cast<float>(M_PI));
     if (abs_dot < cos_thresh)
         return false;
 

@@ -16,6 +16,9 @@
     <ClCompile Include="C:\_LOCAL\GitHub\PC_WIN\tests\pcl_hybrid\shapes.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="C:\_LOCAL\GitHub\PC_WIN\tests\pcl_hybrid\Settings.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="C:\_LOCAL\GitHub\PC_WIN\tests\pcl_hybrid\CMakeLists.txt" />

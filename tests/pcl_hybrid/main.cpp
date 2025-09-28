@@ -32,6 +32,7 @@ using json = nlohmann::json;
 #include "shapes.h"
 #include "PCWinRegionGrowing.h"
 #include <nlohmann/json.hpp>
+#include "Settings.h"
 
 using json = nlohmann::json;
 
@@ -49,6 +50,13 @@ void visualize(const ShapeFinder &sf);
 
 int main(int argc, char** argv)
 {
+    // Attempt to load runtime settings (optional)
+    const std::string settings_path = "C:\\Temp\\pcl_processing\\settings.json";
+    if (LoadSettingsFromFile(settings_path)) {
+        std::cout << "Loaded runtime settings from: " << settings_path << std::endl;
+    } else {
+        std::cout << "No runtime settings found at: " << settings_path << " (using defaults)" << std::endl;
+    }
     //using PointT = pcl::PointXYZ;
     // Create a PCWin_PointCloud instance and import points
     PCWin_PointCloud pc;

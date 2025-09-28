@@ -6,6 +6,7 @@
 #include <pcl/search/kdtree.h>
 #include <unordered_set>
 #include <unordered_map>
+#include "Settings.h"
 
 int ShapeFinder::findShapes(const PCWin_PointCloud& pc) {
     clusters.clear();
@@ -34,13 +35,13 @@ int ShapeFinder::findShapes(const PCWin_PointCloud& pc) {
         // For each coarse cluster create a parent shape (as a PlaneShape placeholder)
         for (auto &cl : coarse_clusters) {
             if (cl.indices.empty()) continue;
-            pcl::PointCloud<PointT>::Ptr parent_cloud(new pcl::PointCloud<PointT>());
-            for (int idx : cl.indices) parent_cloud->push_back(pc.cloud->at(idx));
+            pcl::PointCloud<PointT>::Ptr cloud(new pcl::PointCloud<PointT>());
+            for (int idx : cl.indices) cloud->push_back(pc.cloud->at(idx));
             // create parent shape and register it
-            std::shared_ptr<Shape> parent = std::make_shared<PlaneShape>(parent_cloud);
+            std::shared_ptr<Shape> parent = std::make_shared<PlaneShape>(cloud);
             shapeCollection.push_back(parent);
             // also keep in clusters list for backwards compatibility
-            clusters.push_back(parent_cloud);
+            clusters.push_back(cloud);
             // clusterPlaneLabels.push_back(-1);
         }
     }
@@ -60,64 +61,74 @@ int ShapeFinder::findShapes(const PCWin_PointCloud& pc) {
     // plane-aware + euclidean clustering pipeline on each parent cluster to produce children.
     for (auto &parent : std::vector<std::shared_ptr<Shape>>{rootShape}) {
         // parent points
-        pcl::PointCloud<PointT>::Ptr parent_cloud = parent->getPoints();
-        if (!parent_cloud || parent_cloud->empty()) continue;
+        pcl::PointCloud<PointT>::Ptr cloud = parent->getPoints();
+        if (!cloud || cloud->empty()) continue;
 
         // Extract corresponding normals from the global pc.normals for points that match by coordinate.
-        // Simpler: compute normals locally on the parent_cloud
+        // Simpler: compute normals locally on the cloud
         pcl::PointCloud<pcl::Normal>::Ptr parent_normals(new pcl::PointCloud<pcl::Normal>());
         {
             pcl::NormalEstimation<PointT, pcl::Normal> ne;
             pcl::search::KdTree<PointT>::Ptr ntree(new pcl::search::KdTree<PointT>());
             ne.setSearchMethod(ntree);
             ne.setKSearch(50);
-            ne.setInputCloud(parent_cloud);
+            ne.setInputCloud(cloud);
             ne.compute(*parent_normals);
         }
 
-        // Find the sin of a small angle
+        // Find the sin of a small angle — read from runtime settings if present
         float small_angle_deg = 3.0f;
+        try {
+            if (_SETTINGS.contains("shapefinder") && _SETTINGS["shapefinder"].contains("small_angle_deg")) {
+                small_angle_deg = static_cast<float>(_SETTINGS["shapefinder"]["small_angle_deg"].get<double>());
+            } else {
+                std::cout << "[Settings] shapefinder.small_angle_deg missing: using default " << small_angle_deg << " deg\n";
+            }
+        } catch (const std::exception &ex) {
+            std::cout << "[Settings] shapefinder.small_angle_deg invalid: using default " << small_angle_deg << " deg (" << ex.what() << ")\n";
+        }
+
         float small_angle_sin = std::sin(small_angle_deg * static_cast<float>(M_PI) / 180.0f);
 
         // Compute normal-dominant labels locally (norm: 0=X,1=Y,2=Z, -1 none)
         // These indicate which axis the normal is most aligned with.
-        std::vector<int> parent_plane_labels(parent_cloud->size(), -1);
+        std::vector<int> plane_labels(cloud->size(), -1);
         for (std::size_t i = 0; i < parent_normals->size(); ++i) {
             auto& n = parent_normals->at(i);
             float ax = std::abs(n.normal_x);
             float ay = std::abs(n.normal_y);
             float az = std::abs(n.normal_z);
             // pick largest absolute component; if near-equal use -1
-            if (az > ax && az > ay) parent_plane_labels[i] = 2;
-            else if (ax > ay && ax > az) parent_plane_labels[i] = 0;
-            else if (ay > ax && ay > az) parent_plane_labels[i] = 1;
-            else parent_plane_labels[i] = -1;
+            if (az > ax && az > ay) plane_labels[i] = 2;
+            else if (ax > ay && ax > az) plane_labels[i] = 0;
+            else if (ay > ax && ay > az) plane_labels[i] = 1;
+            else plane_labels[i] = -1;
         }
 
         // Compute plane-compatibility labels (0..2 or -1)
-        std::vector<int> parent_cylinder_labels(parent_cloud->size(), -1);
+        std::vector<int> cylinder_labels(cloud->size(), -1);
         for (std::size_t i = 0; i < parent_normals->size(); ++i) {
             auto& n = parent_normals->at(i);
             float ax = std::abs(n.normal_x);
             float ay = std::abs(n.normal_y);
             float az = std::abs(n.normal_z);
             if (az <= ax && az <= ay) {
-                if (az >= small_angle_sin) parent_cylinder_labels[i] = -1; else parent_cylinder_labels[i] = 2;
+                if (az >= small_angle_sin) cylinder_labels[i] = -1; else cylinder_labels[i] = 2;
             } else if (ax <= ay && ax <= az) {
-                if (ax >= small_angle_sin) parent_cylinder_labels[i] = -1; else parent_cylinder_labels[i] = 0;
+                if (ax >= small_angle_sin) cylinder_labels[i] = -1; else cylinder_labels[i] = 0;
             } else {
-                if (ay >= small_angle_sin) parent_cylinder_labels[i] = -1; else parent_cylinder_labels[i] = 1;
+                if (ay >= small_angle_sin) cylinder_labels[i] = -1; else cylinder_labels[i] = 1;
             }
         }
 
         // Run plane-aware region growing on the parent cloud
-        CylinderAwareRegionGrowing preg(parent_cylinder_labels, parent_normals);
+        CylinderAwareRegionGrowing preg(cylinder_labels, parent_normals);
         preg.setMinClusterSize(25);
         preg.setMaxClusterSize(1000000);
         pcl::search::KdTree<PointT>::Ptr ptree(new pcl::search::KdTree<PointT>());
         preg.setSearchMethod(ptree);
         preg.setNumberOfNeighbours(50);
-        preg.setInputCloud(parent_cloud);
+        preg.setInputCloud(cloud);
         preg.setInputNormals(parent_normals);
 
         std::vector<pcl::PointIndices> p_plane_clusters;
@@ -127,13 +138,13 @@ int ShapeFinder::findShapes(const PCWin_PointCloud& pc) {
         std::unordered_set<int> used_local_indices;
 
         // Extract plane-aware clusters so we can compare overlaps
-        PlaneAwareRegionGrowing preg_plane(parent_plane_labels, parent_normals);
+        PlaneAwareRegionGrowing preg_plane(plane_labels, parent_normals);
         preg_plane.setMinClusterSize(25);
         preg_plane.setMaxClusterSize(1000000);
         pcl::search::KdTree<PointT>::Ptr ptree_plane(new pcl::search::KdTree<PointT>());
         preg_plane.setSearchMethod(ptree_plane);
         preg_plane.setNumberOfNeighbours(50);
-        preg_plane.setInputCloud(parent_cloud);
+        preg_plane.setInputCloud(cloud);
         preg_plane.setInputNormals(parent_normals);
         std::vector<pcl::PointIndices> plane_clusters;
         preg_plane.extract(plane_clusters);
@@ -162,13 +173,13 @@ int ShapeFinder::findShapes(const PCWin_PointCloud& pc) {
                 // plane-aware cluster covers more points -> create PlaneShape from that plane cluster
                 pcl::PointCloud<PointT>::Ptr child_cloud(new pcl::PointCloud<PointT>());
                 for (int pidx : plane_clusters[best_plane_idx].indices) {
-                    child_cloud->push_back(parent_cloud->at(pidx));
+                    child_cloud->push_back(cloud->at(pidx));
                     used_local_indices.insert(pidx);
                 }
                 // determine dominant plane_label and plane_label for this plane cluster
                 std::unordered_map<int,int> freq;
                 for (int pidx : plane_clusters[best_plane_idx].indices) {
-                    int lab = parent_plane_labels[pidx];
+                    int lab = plane_labels[pidx];
                     if (lab != -1) freq[lab]++;
                 }
                 int dominant_plane = -1; int best_count = 0;
@@ -176,7 +187,7 @@ int ShapeFinder::findShapes(const PCWin_PointCloud& pc) {
                 // dominant normal-axis label
                 std::unordered_map<int,int> nfreq;
                 for (int pidx : plane_clusters[best_plane_idx].indices) {
-                    int nl = parent_plane_labels[pidx];
+                    int nl = plane_labels[pidx];
                     if (nl != -1) nfreq[nl]++;
                 }
                 int dominant_norm = -1; best_count = 0;
@@ -190,13 +201,13 @@ int ShapeFinder::findShapes(const PCWin_PointCloud& pc) {
                 // keep cylinder cluster as-is -> create a CylinderShape
                 pcl::PointCloud<PointT>::Ptr child_cloud(new pcl::PointCloud<PointT>());
                 for (int idx : cl.indices) {
-                    child_cloud->push_back(parent_cloud->at(idx));
+                    child_cloud->push_back(cloud->at(idx));
                     used_local_indices.insert(idx);
                 }
                 // determine dominant cylinder label within this cylinder cluster
                 std::unordered_map<int,int> cfreq;
                 for (int idx : cl.indices) {
-                    int lab = parent_cylinder_labels[idx];
+                    int lab = cylinder_labels[idx];
                     if (lab != -1) cfreq[lab]++;
                 }
                 int dominant_cylinder_label = -1; int cbest = 0;
@@ -211,9 +222,9 @@ int ShapeFinder::findShapes(const PCWin_PointCloud& pc) {
         // Residual clustering on leftover local points
         pcl::PointCloud<PointT>::Ptr residual_local(new pcl::PointCloud<PointT>());
         std::vector<int> residual_local_map;
-        for (std::size_t i = 0; i < parent_cloud->size(); ++i) {
+        for (std::size_t i = 0; i < cloud->size(); ++i) {
             if (used_local_indices.find(static_cast<int>(i)) == used_local_indices.end()) {
-                residual_local->push_back(parent_cloud->at(i));
+                residual_local->push_back(cloud->at(i));
                 residual_local_map.push_back(static_cast<int>(i));
             }
         }

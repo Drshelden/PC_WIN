@@ -1,0 +1,1 @@
+r"C:_LOCAL\GitHub\PC_WIN\tests\pcl_hybrid\build_py39\Release" if pyd_dir not in sys.path: sys.path.insert(0, pyd_dir) try: import pcl_hybrid_py print("Imported pcl_hybrid_py OK:", getattr(pcl_hybrid_py, 'version', 'no version')) except Exception: traceback.print_exc()

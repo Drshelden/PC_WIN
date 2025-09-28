@@ -3,3 +3,4 @@ C:\_LOCAL\GitHub\PC_WIN\tests\pcl_hybrid\PCWinRegionGrowing.cpp;C:\_LOCAL\GitHub
 C:\_LOCAL\GitHub\PC_WIN\tests\pcl_hybrid\PCWinPointCloud.cpp;C:\_LOCAL\GitHub\PC_WIN\tests\pcl_hybrid\build_py39\pcl_hybrid_core.dir\Release\PCWinPointCloud.obj
 C:\_LOCAL\GitHub\PC_WIN\tests\pcl_hybrid\ShapeFinder.cpp;C:\_LOCAL\GitHub\PC_WIN\tests\pcl_hybrid\build_py39\pcl_hybrid_core.dir\Release\ShapeFinder.obj
 C:\_LOCAL\GitHub\PC_WIN\tests\pcl_hybrid\shapes.cpp;C:\_LOCAL\GitHub\PC_WIN\tests\pcl_hybrid\build_py39\pcl_hybrid_core.dir\Release\shapes.obj
+C:\_LOCAL\GitHub\PC_WIN\tests\pcl_hybrid\Settings.cpp;C:\_LOCAL\GitHub\PC_WIN\tests\pcl_hybrid\build_py39\pcl_hybrid_core.dir\Release\Settings.obj

@@ -91,7 +91,8 @@
         "stack": "cpp",
         "strstream": "cpp",
         "typeindex": "cpp",
-        "variant": "cpp"
+        "variant": "cpp",
+        "coroutine": "cpp"
     },
     "terminal.integrated.env.windows": {
         "PATH": "C:\\_LOCAL\\GitHub\\PC_WIN\\tests\\pcl_hybrid\\build_py39\\Release;C:\\vcpkg\\installed\\x64-windows\\bin;C:\\Program Files\\Python39\\Scripts;C:\\Program Files\\Python39;C:\\_LOCAL\\Dev\\PCL\\PCL 1.15.0\\bin;${env:PATH}"

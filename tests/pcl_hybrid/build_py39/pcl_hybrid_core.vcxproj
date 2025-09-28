@@ -79,6 +79,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
+      <AdditionalIncludeDirectories>C:\_LOCAL\GitHub\PC_WIN\tests\pcl_hybrid;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>%(AdditionalOptions) /external:I "C:/Program Files/PCL 1.14.1/3rdParty/Eigen3/include/eigen3" /external:I "C:/Program Files/PCL 1.14.1/include/pcl-1.14" /external:I "C:/Program Files/PCL 1.14.1/3rdParty/Boost/include/boost-1_84" /external:I "C:/Program Files/OpenNI2/Include" /external:I "C:/Program Files/PCL 1.14.1/3rdParty/VTK/include/vtk-9.3" /external:I "C:/Program Files/PCL 1.14.1/3rdParty/VTK/include/vtk-9.3/vtknlohmannjson/include" /external:I "C:/Program Files/PCL 1.14.1/3rdParty/VTK/include/vtk-9.3/vtkfreetype/include" /external:I "C:/vcpkg/installed/x64-windows/include" /FS</AdditionalOptions>
       <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -104,10 +105,10 @@
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_DEBUG;_WINDOWS;VISUALIZE=1;__SSE4_2__;__SSE4_1__;__SSSE3__;__SSE3__;__SSE2__;__SSE__;EIGEN_HAS_CXX17_OVERALIGN=0;BOOST_ALL_NO_LIB;BOOST_SYSTEM_NO_LIB;BOOST_IOSTREAMS_NO_LIB;BOOST_BZIP2_NO_LIB;BOOST_ZLIB_NO_LIB;BOOST_FILESYSTEM_NO_LIB;BOOST_ATOMIC_NO_LIB;BOOST_SERIALIZATION_NO_LIB;kiss_fft_scalar=double;KISSFFT_DLL_IMPORT=1;CMAKE_INTDIR=\"Debug\"</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\Program Files\PCL 1.14.1\3rdParty\Eigen3\include\eigen3;C:\Program Files\PCL 1.14.1\include\pcl-1.14;C:\Program Files\PCL 1.14.1\3rdParty\Boost\include\boost-1_84;C:\Program Files\OpenNI2\Include;C:\Program Files\PCL 1.14.1\3rdParty\VTK\include\vtk-9.3;C:\Program Files\PCL 1.14.1\3rdParty\VTK\include\vtk-9.3\vtknlohmannjson\include;C:\Program Files\PCL 1.14.1\3rdParty\VTK\include\vtk-9.3\vtkfreetype\include;C:\vcpkg\installed\x64-windows\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\_LOCAL\GitHub\PC_WIN\tests\pcl_hybrid;C:\Program Files\PCL 1.14.1\3rdParty\Eigen3\include\eigen3;C:\Program Files\PCL 1.14.1\include\pcl-1.14;C:\Program Files\PCL 1.14.1\3rdParty\Boost\include\boost-1_84;C:\Program Files\OpenNI2\Include;C:\Program Files\PCL 1.14.1\3rdParty\VTK\include\vtk-9.3;C:\Program Files\PCL 1.14.1\3rdParty\VTK\include\vtk-9.3\vtknlohmannjson\include;C:\Program Files\PCL 1.14.1\3rdParty\VTK\include\vtk-9.3\vtkfreetype\include;C:\vcpkg\installed\x64-windows\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Midl>
-      <AdditionalIncludeDirectories>C:\Program Files\PCL 1.14.1\3rdParty\Eigen3\include\eigen3;C:\Program Files\PCL 1.14.1\include\pcl-1.14;C:\Program Files\PCL 1.14.1\3rdParty\Boost\include\boost-1_84;C:\Program Files\OpenNI2\Include;C:\Program Files\PCL 1.14.1\3rdParty\VTK\include\vtk-9.3;C:\Program Files\PCL 1.14.1\3rdParty\VTK\include\vtk-9.3\vtknlohmannjson\include;C:\Program Files\PCL 1.14.1\3rdParty\VTK\include\vtk-9.3\vtkfreetype\include;C:\vcpkg\installed\x64-windows\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\_LOCAL\GitHub\PC_WIN\tests\pcl_hybrid;C:\Program Files\PCL 1.14.1\3rdParty\Eigen3\include\eigen3;C:\Program Files\PCL 1.14.1\include\pcl-1.14;C:\Program Files\PCL 1.14.1\3rdParty\Boost\include\boost-1_84;C:\Program Files\OpenNI2\Include;C:\Program Files\PCL 1.14.1\3rdParty\VTK\include\vtk-9.3;C:\Program Files\PCL 1.14.1\3rdParty\VTK\include\vtk-9.3\vtknlohmannjson\include;C:\Program Files\PCL 1.14.1\3rdParty\VTK\include\vtk-9.3\vtkfreetype\include;C:\vcpkg\installed\x64-windows\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -120,6 +121,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
+      <AdditionalIncludeDirectories>C:\_LOCAL\GitHub\PC_WIN\tests\pcl_hybrid;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>%(AdditionalOptions) /external:I "C:/Program Files/PCL 1.14.1/3rdParty/Eigen3/include/eigen3" /external:I "C:/Program Files/PCL 1.14.1/include/pcl-1.14" /external:I "C:/Program Files/PCL 1.14.1/3rdParty/Boost/include/boost-1_84" /external:I "C:/Program Files/OpenNI2/Include" /external:I "C:/Program Files/PCL 1.14.1/3rdParty/VTK/include/vtk-9.3" /external:I "C:/Program Files/PCL 1.14.1/3rdParty/VTK/include/vtk-9.3/vtknlohmannjson/include" /external:I "C:/Program Files/PCL 1.14.1/3rdParty/VTK/include/vtk-9.3/vtkfreetype/include" /external:I "C:/vcpkg/installed/x64-windows/include" /FS</AdditionalOptions>
       <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
@@ -146,10 +148,10 @@
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;VISUALIZE=1;__SSE4_2__;__SSE4_1__;__SSSE3__;__SSE3__;__SSE2__;__SSE__;EIGEN_HAS_CXX17_OVERALIGN=0;BOOST_ALL_NO_LIB;BOOST_SYSTEM_NO_LIB;BOOST_IOSTREAMS_NO_LIB;BOOST_BZIP2_NO_LIB;BOOST_ZLIB_NO_LIB;BOOST_FILESYSTEM_NO_LIB;BOOST_ATOMIC_NO_LIB;BOOST_SERIALIZATION_NO_LIB;kiss_fft_scalar=double;KISSFFT_DLL_IMPORT=1;CMAKE_INTDIR=\"Release\"</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\Program Files\PCL 1.14.1\3rdParty\Eigen3\include\eigen3;C:\Program Files\PCL 1.14.1\include\pcl-1.14;C:\Program Files\PCL 1.14.1\3rdParty\Boost\include\boost-1_84;C:\Program Files\OpenNI2\Include;C:\Program Files\PCL 1.14.1\3rdParty\VTK\include\vtk-9.3;C:\Program Files\PCL 1.14.1\3rdParty\VTK\include\vtk-9.3\vtknlohmannjson\include;C:\Program Files\PCL 1.14.1\3rdParty\VTK\include\vtk-9.3\vtkfreetype\include;C:\vcpkg\installed\x64-windows\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\_LOCAL\GitHub\PC_WIN\tests\pcl_hybrid;C:\Program Files\PCL 1.14.1\3rdParty\Eigen3\include\eigen3;C:\Program Files\PCL 1.14.1\include\pcl-1.14;C:\Program Files\PCL 1.14.1\3rdParty\Boost\include\boost-1_84;C:\Program Files\OpenNI2\Include;C:\Program Files\PCL 1.14.1\3rdParty\VTK\include\vtk-9.3;C:\Program Files\PCL 1.14.1\3rdParty\VTK\include\vtk-9.3\vtknlohmannjson\include;C:\Program Files\PCL 1.14.1\3rdParty\VTK\include\vtk-9.3\vtkfreetype\include;C:\vcpkg\installed\x64-windows\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Midl>
-      <AdditionalIncludeDirectories>C:\Program Files\PCL 1.14.1\3rdParty\Eigen3\include\eigen3;C:\Program Files\PCL 1.14.1\include\pcl-1.14;C:\Program Files\PCL 1.14.1\3rdParty\Boost\include\boost-1_84;C:\Program Files\OpenNI2\Include;C:\Program Files\PCL 1.14.1\3rdParty\VTK\include\vtk-9.3;C:\Program Files\PCL 1.14.1\3rdParty\VTK\include\vtk-9.3\vtknlohmannjson\include;C:\Program Files\PCL 1.14.1\3rdParty\VTK\include\vtk-9.3\vtkfreetype\include;C:\vcpkg\installed\x64-windows\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\_LOCAL\GitHub\PC_WIN\tests\pcl_hybrid;C:\Program Files\PCL 1.14.1\3rdParty\Eigen3\include\eigen3;C:\Program Files\PCL 1.14.1\include\pcl-1.14;C:\Program Files\PCL 1.14.1\3rdParty\Boost\include\boost-1_84;C:\Program Files\OpenNI2\Include;C:\Program Files\PCL 1.14.1\3rdParty\VTK\include\vtk-9.3;C:\Program Files\PCL 1.14.1\3rdParty\VTK\include\vtk-9.3\vtknlohmannjson\include;C:\Program Files\PCL 1.14.1\3rdParty\VTK\include\vtk-9.3\vtkfreetype\include;C:\vcpkg\installed\x64-windows\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -162,6 +164,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">
     <ClCompile>
+      <AdditionalIncludeDirectories>C:\_LOCAL\GitHub\PC_WIN\tests\pcl_hybrid;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>%(AdditionalOptions) /external:I "C:/Program Files/PCL 1.14.1/3rdParty/Eigen3/include/eigen3" /external:I "C:/Program Files/PCL 1.14.1/include/pcl-1.14" /external:I "C:/Program Files/PCL 1.14.1/3rdParty/Boost/include/boost-1_84" /external:I "C:/Program Files/OpenNI2/Include" /external:I "C:/Program Files/PCL 1.14.1/3rdParty/VTK/include/vtk-9.3" /external:I "C:/Program Files/PCL 1.14.1/3rdParty/VTK/include/vtk-9.3/vtknlohmannjson/include" /external:I "C:/Program Files/PCL 1.14.1/3rdParty/VTK/include/vtk-9.3/vtkfreetype/include" /external:I "C:/vcpkg/installed/x64-windows/include" /FS</AdditionalOptions>
       <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
@@ -188,10 +191,10 @@
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;VISUALIZE=1;__SSE4_2__;__SSE4_1__;__SSSE3__;__SSE3__;__SSE2__;__SSE__;EIGEN_HAS_CXX17_OVERALIGN=0;BOOST_ALL_NO_LIB;BOOST_SYSTEM_NO_LIB;BOOST_IOSTREAMS_NO_LIB;BOOST_BZIP2_NO_LIB;BOOST_ZLIB_NO_LIB;BOOST_FILESYSTEM_NO_LIB;BOOST_ATOMIC_NO_LIB;BOOST_SERIALIZATION_NO_LIB;kiss_fft_scalar=double;KISSFFT_DLL_IMPORT=1;CMAKE_INTDIR=\"MinSizeRel\"</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\Program Files\PCL 1.14.1\3rdParty\Eigen3\include\eigen3;C:\Program Files\PCL 1.14.1\include\pcl-1.14;C:\Program Files\PCL 1.14.1\3rdParty\Boost\include\boost-1_84;C:\Program Files\OpenNI2\Include;C:\Program Files\PCL 1.14.1\3rdParty\VTK\include\vtk-9.3;C:\Program Files\PCL 1.14.1\3rdParty\VTK\include\vtk-9.3\vtknlohmannjson\include;C:\Program Files\PCL 1.14.1\3rdParty\VTK\include\vtk-9.3\vtkfreetype\include;C:\vcpkg\installed\x64-windows\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\_LOCAL\GitHub\PC_WIN\tests\pcl_hybrid;C:\Program Files\PCL 1.14.1\3rdParty\Eigen3\include\eigen3;C:\Program Files\PCL 1.14.1\include\pcl-1.14;C:\Program Files\PCL 1.14.1\3rdParty\Boost\include\boost-1_84;C:\Program Files\OpenNI2\Include;C:\Program Files\PCL 1.14.1\3rdParty\VTK\include\vtk-9.3;C:\Program Files\PCL 1.14.1\3rdParty\VTK\include\vtk-9.3\vtknlohmannjson\include;C:\Program Files\PCL 1.14.1\3rdParty\VTK\include\vtk-9.3\vtkfreetype\include;C:\vcpkg\installed\x64-windows\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Midl>
-      <AdditionalIncludeDirectories>C:\Program Files\PCL 1.14.1\3rdParty\Eigen3\include\eigen3;C:\Program Files\PCL 1.14.1\include\pcl-1.14;C:\Program Files\PCL 1.14.1\3rdParty\Boost\include\boost-1_84;C:\Program Files\OpenNI2\Include;C:\Program Files\PCL 1.14.1\3rdParty\VTK\include\vtk-9.3;C:\Program Files\PCL 1.14.1\3rdParty\VTK\include\vtk-9.3\vtknlohmannjson\include;C:\Program Files\PCL 1.14.1\3rdParty\VTK\include\vtk-9.3\vtkfreetype\include;C:\vcpkg\installed\x64-windows\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\_LOCAL\GitHub\PC_WIN\tests\pcl_hybrid;C:\Program Files\PCL 1.14.1\3rdParty\Eigen3\include\eigen3;C:\Program Files\PCL 1.14.1\include\pcl-1.14;C:\Program Files\PCL 1.14.1\3rdParty\Boost\include\boost-1_84;C:\Program Files\OpenNI2\Include;C:\Program Files\PCL 1.14.1\3rdParty\VTK\include\vtk-9.3;C:\Program Files\PCL 1.14.1\3rdParty\VTK\include\vtk-9.3\vtknlohmannjson\include;C:\Program Files\PCL 1.14.1\3rdParty\VTK\include\vtk-9.3\vtkfreetype\include;C:\vcpkg\installed\x64-windows\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -204,6 +207,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">
     <ClCompile>
+      <AdditionalIncludeDirectories>C:\_LOCAL\GitHub\PC_WIN\tests\pcl_hybrid;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>%(AdditionalOptions) /external:I "C:/Program Files/PCL 1.14.1/3rdParty/Eigen3/include/eigen3" /external:I "C:/Program Files/PCL 1.14.1/include/pcl-1.14" /external:I "C:/Program Files/PCL 1.14.1/3rdParty/Boost/include/boost-1_84" /external:I "C:/Program Files/OpenNI2/Include" /external:I "C:/Program Files/PCL 1.14.1/3rdParty/VTK/include/vtk-9.3" /external:I "C:/Program Files/PCL 1.14.1/3rdParty/VTK/include/vtk-9.3/vtknlohmannjson/include" /external:I "C:/Program Files/PCL 1.14.1/3rdParty/VTK/include/vtk-9.3/vtkfreetype/include" /external:I "C:/vcpkg/installed/x64-windows/include" /FS</AdditionalOptions>
       <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
@@ -229,10 +233,10 @@
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;VISUALIZE=1;__SSE4_2__;__SSE4_1__;__SSSE3__;__SSE3__;__SSE2__;__SSE__;EIGEN_HAS_CXX17_OVERALIGN=0;BOOST_ALL_NO_LIB;BOOST_SYSTEM_NO_LIB;BOOST_IOSTREAMS_NO_LIB;BOOST_BZIP2_NO_LIB;BOOST_ZLIB_NO_LIB;BOOST_FILESYSTEM_NO_LIB;BOOST_ATOMIC_NO_LIB;BOOST_SERIALIZATION_NO_LIB;kiss_fft_scalar=double;KISSFFT_DLL_IMPORT=1;CMAKE_INTDIR=\"RelWithDebInfo\"</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\Program Files\PCL 1.14.1\3rdParty\Eigen3\include\eigen3;C:\Program Files\PCL 1.14.1\include\pcl-1.14;C:\Program Files\PCL 1.14.1\3rdParty\Boost\include\boost-1_84;C:\Program Files\OpenNI2\Include;C:\Program Files\PCL 1.14.1\3rdParty\VTK\include\vtk-9.3;C:\Program Files\PCL 1.14.1\3rdParty\VTK\include\vtk-9.3\vtknlohmannjson\include;C:\Program Files\PCL 1.14.1\3rdParty\VTK\include\vtk-9.3\vtkfreetype\include;C:\vcpkg\installed\x64-windows\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\_LOCAL\GitHub\PC_WIN\tests\pcl_hybrid;C:\Program Files\PCL 1.14.1\3rdParty\Eigen3\include\eigen3;C:\Program Files\PCL 1.14.1\include\pcl-1.14;C:\Program Files\PCL 1.14.1\3rdParty\Boost\include\boost-1_84;C:\Program Files\OpenNI2\Include;C:\Program Files\PCL 1.14.1\3rdParty\VTK\include\vtk-9.3;C:\Program Files\PCL 1.14.1\3rdParty\VTK\include\vtk-9.3\vtknlohmannjson\include;C:\Program Files\PCL 1.14.1\3rdParty\VTK\include\vtk-9.3\vtkfreetype\include;C:\vcpkg\installed\x64-windows\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Midl>
-      <AdditionalIncludeDirectories>C:\Program Files\PCL 1.14.1\3rdParty\Eigen3\include\eigen3;C:\Program Files\PCL 1.14.1\include\pcl-1.14;C:\Program Files\PCL 1.14.1\3rdParty\Boost\include\boost-1_84;C:\Program Files\OpenNI2\Include;C:\Program Files\PCL 1.14.1\3rdParty\VTK\include\vtk-9.3;C:\Program Files\PCL 1.14.1\3rdParty\VTK\include\vtk-9.3\vtknlohmannjson\include;C:\Program Files\PCL 1.14.1\3rdParty\VTK\include\vtk-9.3\vtkfreetype\include;C:\vcpkg\installed\x64-windows\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\_LOCAL\GitHub\PC_WIN\tests\pcl_hybrid;C:\Program Files\PCL 1.14.1\3rdParty\Eigen3\include\eigen3;C:\Program Files\PCL 1.14.1\include\pcl-1.14;C:\Program Files\PCL 1.14.1\3rdParty\Boost\include\boost-1_84;C:\Program Files\OpenNI2\Include;C:\Program Files\PCL 1.14.1\3rdParty\VTK\include\vtk-9.3;C:\Program Files\PCL 1.14.1\3rdParty\VTK\include\vtk-9.3\vtknlohmannjson\include;C:\Program Files\PCL 1.14.1\3rdParty\VTK\include\vtk-9.3\vtkfreetype\include;C:\vcpkg\installed\x64-windows\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -306,6 +310,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClCompile Include="C:\_LOCAL\GitHub\PC_WIN\tests\pcl_hybrid\PCWinPointCloud.cpp" />
     <ClCompile Include="C:\_LOCAL\GitHub\PC_WIN\tests\pcl_hybrid\ShapeFinder.cpp" />
     <ClCompile Include="C:\_LOCAL\GitHub\PC_WIN\tests\pcl_hybrid\shapes.cpp" />
+    <ClCompile Include="C:\_LOCAL\GitHub\PC_WIN\tests\pcl_hybrid\Settings.cpp" />
     <Natvis Include="C:\vcpkg\installed\x64-windows\share\nlohmann_json\nlohmann_json.natvis">
     </Natvis>
   </ItemGroup>

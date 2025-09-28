@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<RhinoUI major_ver="5" minor_ver="0" guid="f20c6033-6b59-4c4d-8e5e-d91ef40ae989">
+  <tool_bar_groups />
+  <tool_bars />
+  <macros />
+  <bitmaps>
+    <small_bitmap item_width="0" item_height="0" />
+    <normal_bitmap item_width="0" item_height="0" />
+    <large_bitmap item_width="0" item_height="0" />
+  </bitmaps>
+</RhinoUI>

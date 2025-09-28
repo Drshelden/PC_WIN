@@ -1,0 +1,49 @@
+{
+    "general": {
+        "cluster_tolerance": 3.0,
+        "min_cluster_size": 50,
+        "max_cluster_size": 1000000,
+        "max_shapes_per_cluster": 10,
+        "min_points_threshold": 50
+    },
+    "plane": {
+        "min_points": 10,
+        "epsilon": 0.5,
+        "cluster_epsilon": 1.0,
+        "normal_threshold": 0.9,
+        "probability": 0.05
+    },
+    "cylinder": {
+        "min_points": 8,
+        "epsilon": 2.0,
+        "cluster_epsilon": 2.5,
+        "normal_threshold": 0.6,
+        "probability": 0.01
+    },
+    "cone": {
+        "min_points": 8,
+        "epsilon": 2.0,
+        "cluster_epsilon": 2.5,
+        "normal_threshold": 0.6,
+        "probability": 0.01
+    },
+    "torus": {
+        "min_points": 8,
+        "epsilon": 3.0,
+        "cluster_epsilon": 3.5,
+        "normal_threshold": 0.5,
+        "probability": 0.01
+    },
+    "pcl": {
+        "distance_threshold_plane": 1.0,
+        "distance_threshold_cylinder": 1.0,
+        "normal_distance_weight": 0.1,
+        "cylinder_radius_min": 1.0,
+        "cylinder_radius_max": 10.0,
+        "max_iterations_plane": 1000,
+        "max_iterations_cylinder": 50000,
+        "normal_weight_cylinder": 0.2
+    },
+    "version": "1.0",
+    "timestamp": "9/20/2025 11:05:16 PM"
+}

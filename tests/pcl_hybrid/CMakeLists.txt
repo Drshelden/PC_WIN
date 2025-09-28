@@ -37,6 +37,7 @@ set(SRCS
     PCWinPointCloud.cpp
     ShapeFinder.cpp
     shapes.cpp
+  Settings.cpp
 )
 
 # Create a core static library from all sources except main.cpp so we can
@@ -107,6 +108,9 @@ if(PCL_INCLUDE_DIRS)
   target_include_directories(pcl_hybrid_core PRIVATE ${PCL_INCLUDE_DIRS})
   target_include_directories(${PROJECT_NAME} PRIVATE ${PCL_INCLUDE_DIRS})
 endif()
+# Ensure project headers (current source dir) are available to targets
+target_include_directories(pcl_hybrid_core PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 if(PCL_DEFINITIONS)
   # PCL_DEFINITIONS may contain items like "-DNAME" or plain "NAME" separated by semicolons.
   # Iterate as a CMake list, strip any leading "-D", and apply each as a proper compile definition

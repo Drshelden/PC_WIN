@@ -87,8 +87,8 @@ class RhinoPointCloudProcessor:
         if not isinstance(pointcloud, rg.PointCloud):
             print("Selected object is not a point cloud.")
             return None
-            
-        print(f"Selected point cloud with {pointcloud.Count} points")
+
+        print("Selected point cloud with " + str(pointcloud.Count) + " points")
         return pointcloud, objref.ObjectId
     
     def pointcloud_to_list(self, pointcloud):
@@ -99,32 +99,92 @@ class RhinoPointCloudProcessor:
             points.append([float(pt.X), float(pt.Y), float(pt.Z)])
         return points
     
-    def process_pointcloud_wsl(self, points, solver_type="BEST"):
+    def process_pointcloud(self, points, solver_type="BEST"):
         """
         Process the point cloud using the built Windows Release Python bindings directly
         (pcl_hybrid_py). This avoids calling a WSL script and runs ShapeFinder in-process.
         Returns the same dict format as `extract_shapes_from_points` used elsewhere.
         """
-        print(f"Processing {len(points)} points via local bindings...")
+        print("Processing " + str(len(points)) + " points via local bindings...")
         # Ensure Release build and vcpkg bins are on PATH and sys.path so imports and DLL loading succeed
         try:
             import sys
+            import glob
+            import importlib
+            # Guarded imports: some embedded Pythons (Rhino) lack importlib.util or importlib.machinery
+            try:
+                import importlib.util as _importlib_util
+            except Exception:
+                _importlib_util = None
+            try:
+                import importlib.machinery as _importlib_machinery
+            except Exception:
+                _importlib_machinery = None
+
             br = os.path.abspath(os.path.join(os.path.dirname(__file__), 'build_py39', 'Release'))
             vcpkg_bin = r'C:\vcpkg\installed\x64-windows\bin'
-            if os.path.isdir(br):
-                # prepend so loader finds the .pyd and local DLLs first
-                os.environ['PATH'] = br + os.pathsep + vcpkg_bin + os.pathsep + os.environ.get('PATH', '')
-                if br not in sys.path:
-                    sys.path.insert(0, br)
-            else:
-                # also try the older build location
-                alt = os.path.abspath(os.path.join(os.path.dirname(__file__), 'build', 'Debug'))
-                if os.path.isdir(alt) and alt not in sys.path:
-                    sys.path.insert(0, alt)
 
-            import pcl_hybrid_py as ph
+            # Candidate directories to probe for the compiled extension
+            candidate_dirs = [
+                br,
+                os.path.abspath(os.path.join(os.path.dirname(__file__), 'build_py39', 'Debug')),
+                os.path.abspath(os.path.join(os.path.dirname(__file__), 'build', 'Debug')),
+                os.path.abspath(os.path.join(os.path.dirname(__file__), 'build', 'Release')),
+            ]
+
+            for d in candidate_dirs:
+                if os.path.isdir(d):
+                    os.environ['PATH'] = d + os.pathsep + vcpkg_bin + os.pathsep + os.environ.get('PATH', '')
+                    if d not in sys.path:
+                        sys.path.insert(0, d)
+
+            # Try normal import first
+            try:
+                import pcl_hybrid_py as ph
+            except Exception:
+                # If normal import failed, try to find a matching .pyd and load it directly
+                pyd_paths = []
+                for d in candidate_dirs:
+                    try:
+                        pyd_paths.extend(glob.glob(os.path.join(d, 'pcl_hybrid_py*.pyd')))
+                    except Exception:
+                        pass
+
+                # fallback: recursive search inside the module folder
+                if not pyd_paths:
+                    pyd_paths = glob.glob(os.path.join(os.path.dirname(__file__), '**', 'pcl_hybrid_py*.pyd'), recursive=True)
+
+                if pyd_paths:
+                    pyd = pyd_paths[0]
+                    try:
+                        # Try using importlib.machinery.ExtensionFileLoader where available
+                        loader = None
+                        if _importlib_machinery is not None:
+                            loader = _importlib_machinery.ExtensionFileLoader('pcl_hybrid_py', pyd)
+                        # Some embedded Python runtimes (older Rhino/Python) may not expose importlib.util
+                        if loader is not None and _importlib_util is not None:
+                            spec = _importlib_util.spec_from_loader(loader.name, loader)
+                            ph = _importlib_util.module_from_spec(spec)
+                            loader.exec_module(ph)
+                            sys.modules['pcl_hybrid_py'] = ph
+                        else:
+                            # Fallback for older runtimes: try imp.load_dynamic
+                            try:
+                                import imp
+                                ph = imp.load_dynamic('pcl_hybrid_py', pyd)
+                                sys.modules['pcl_hybrid_py'] = ph
+                            except Exception:
+                                # Last resort: insert directory to sys.path and use normal import
+                                ddir = os.path.dirname(pyd)
+                                if ddir not in sys.path:
+                                    sys.path.insert(0, ddir)
+                                ph = __import__('pcl_hybrid_py')
+                    except Exception as e:
+                        raise ImportError('Failed to load pcl_hybrid_py from "' + pyd + '": ' + str(e))
+                else:
+                    raise ImportError('pcl_hybrid_py compiled extension not found in candidate build directories')
         except Exception as e:
-            error_msg = f"Failed to import Release bindings (pcl_hybrid_py): {e}"
+            error_msg = 'Failed to import Release bindings (pcl_hybrid_py): ' + str(e)
             print(error_msg)
             return {"error": error_msg}
 
@@ -153,9 +213,9 @@ class RhinoPointCloudProcessor:
             # pybind11 binding expects a single buffer argument; the C++ side determines point count
             rc = pc.importPointsFromBuffer(buf)
             if rc != 0:
-                return {"error": f"importPointsFromBuffer failed with code {rc}"}
+                return {"error": "importPointsFromBuffer failed with code " + str(rc)}
         except Exception as e:
-            return {"error": f"Failed to import points into PCWin_PointCloud: {e}"}
+            return {"error": "Failed to import points into PCWin_PointCloud: " + str(e)}
 
         # run shape finding
         try:
@@ -163,7 +223,7 @@ class RhinoPointCloudProcessor:
             print("Calling ShapeFinder.findShapes(pc)...")
             sf.findShapes(pc)
         except Exception as e:
-            error_msg = f"ShapeFinder failed: {e}"
+            error_msg = "ShapeFinder failed: " + str(e)
             print(error_msg)
             return {"error": error_msg}
 
@@ -294,7 +354,7 @@ class RhinoPointCloudProcessor:
     
     def visualize_plane(self, coefficients, critical_points, shape_points, cluster_id, i):
         if len(shape_points) < min_points_for_shape:
-            print(f"  Skipping plane visualization due to insufficient points ({len(shape_points)} < {min_points_for_shape})")
+            print("  Skipping plane visualization due to insufficient points (" + str(len(shape_points)) + " < " + str(min_points_for_shape) + ")")
             return
         shape_type="plane"
         created = []
@@ -303,7 +363,7 @@ class RhinoPointCloudProcessor:
             point_cloud_guid = self.add_pointcloud_to_rhino(shape_points, "plane", cluster_id, i)
             if point_cloud_guid:
                 created.append(point_cloud_guid)
-                print(f"  Added {shape_type} point cloud to Rhino ({len(shape_points)} points)")
+                #print("  Added " + str(shape_type) + " point cloud to Rhino (" + str(len(shape_points)) + " points)")
 
         """Create transparent plane surface and yellow boundary polygon from critical points"""
         if not critical_points or len(critical_points) < 3:
@@ -352,8 +412,8 @@ class RhinoPointCloudProcessor:
                         # Make transparent (this might need to be done differently in Rhino)
                         cluster_str = str(cluster_id)
                         count_str = str(i)
-                        rs.ObjectName(surface_guid, f"Plane_Cluster{cluster_str}_Shape{count_str}_Surface")
-                        print(f"  Added plane surface")
+                        rs.ObjectName(surface_guid, "Plane_Cluster" + cluster_str + "_Shape" + count_str + "_Surface")
+                        #print("  Added plane surface")
             
                 if boundary_curve:
                     # Add boundary curve colored according to plane label (caller will recolor the point cloud)
@@ -365,14 +425,14 @@ class RhinoPointCloudProcessor:
                         rs.ObjectPrintWidth(boundary_guid, 0.01)  # 1px width
                         cluster_str = str(cluster_id)
                         count_str = str(i)
-                        rs.ObjectName(boundary_guid, f"Plane_Cluster{cluster_str}_Shape{count_str}_Boundary")
-                        print(f"  Added plane boundary")
+                        rs.ObjectName(boundary_guid, "Plane_Cluster" + cluster_str + "_Shape" + count_str + "_Boundary")
+                        #print("  Added plane boundary")
 
         return created
     
     def visualize_cylinder(self, coefficients, critical_points, shape_points, cluster_id, i):
         if len(shape_points) < min_points_for_shape:
-            print(f"  Skipping cylinder visualization due to insufficient points ({len(shape_points)} < {min_points_for_shape})")
+            print("  Skipping cylinder visualization due to insufficient points (" + str(len(shape_points)) + " < " + str(min_points_for_shape) + ")")
             return
         shape_type="cylider"
         created = []
@@ -381,7 +441,7 @@ class RhinoPointCloudProcessor:
             point_cloud_guid = self.add_pointcloud_to_rhino(shape_points, "cylinder", cluster_id, i)
             if point_cloud_guid:
                 created.append(point_cloud_guid)
-                print(f"  Added {shape_type} point cloud to Rhino ({len(shape_points)} points)")
+                #print("  Added " + str(shape_type) + " point cloud to Rhino (" + str(len(shape_points)) + " points)")
 
         """Create transparent cylinder surface and red axis line from critical points"""
         if not critical_points or len(critical_points) != 2:
@@ -430,8 +490,8 @@ class RhinoPointCloudProcessor:
                 rs.ObjectColor(surface_guid, Color.White)
                 cluster_str = str(cluster_id)
                 count_str = str(i)
-                rs.ObjectName(surface_guid, f"Cylinder_Cluster{cluster_str}_Shape{count_str}_Surface")
-                print(f"  Added cylinder surface")
+                rs.ObjectName(surface_guid, "Cylinder_Cluster" + cluster_str + "_Shape" + count_str + "_Surface")
+                #print("  Added cylinder surface")
         
         if axis_curve:
             # Add thick red axis line
@@ -442,8 +502,8 @@ class RhinoPointCloudProcessor:
                 rs.ObjectPrintWidth(axis_guid, 2.0)  # Thick line
                 cluster_str = str(cluster_id)
                 count_str = str(i)
-                rs.ObjectName(axis_guid, f"Cylinder_Cluster{cluster_str}_Shape{count_str}_Axis")
-                print(f"  Added cylinder axis")
+                rs.ObjectName(axis_guid, "Cylinder_Cluster" + cluster_str + "_Shape" + count_str + "_Axis")
+                #print("  Added cylinder axis")
 
         return created
     
@@ -451,9 +511,9 @@ class RhinoPointCloudProcessor:
         shape_type="cone"
         if len(shape_points) > 0:
             point_cloud_guid = self.add_pointcloud_to_rhino(shape_points, "cone", cluster_id, i)
-            if point_cloud_guid:
+            #if point_cloud_guid:
                 # created_objects.append(guid)
-                print(f"  Added {shape_type} point cloud to Rhino ({len(shape_points)} points)")
+                #print("  Added " + str(shape_type) + " point cloud to Rhino (" + str(len(shape_points)) + " points)")
 
         """Create transparent cone surface and red axis line from critical points"""
         if not critical_points or len(critical_points) != 2:
@@ -512,9 +572,9 @@ class RhinoPointCloudProcessor:
             surface_guid = scriptcontext.doc.Objects.AddBrep(cone_surface)
             if surface_guid:
                 rs.ObjectColor(surface_guid, Color.White)
-                rs.ObjectName(surface_guid, f"Cone_Cluster{cluster_id}_Shape{i+1}_Surface")
+                rs.ObjectName(surface_guid, "Cone_Cluster" + str(cluster_id) + "_Shape" + str(i+1) + "_Surface")
                 # created_objects.append(surface_guid)
-                print(f"  Added cone surface")
+                print("  Added cone surface")
         
         if axis_curve:
             # Add thick red axis line
@@ -522,17 +582,17 @@ class RhinoPointCloudProcessor:
             if axis_guid:
                 rs.ObjectColor(axis_guid, Color.Red)
                 rs.ObjectPrintWidth(axis_guid, 2.0)  # Thick line
-                rs.ObjectName(axis_guid, f"Cone_Cluster{cluster_id}_Shape{i+1}_Axis")
+                rs.ObjectName(axis_guid, "Cone_Cluster" + str(cluster_id) + "_Shape" + str(i+1) + "_Axis")
                 # created_objects.append(axis_guid)
-                print(f"  Added cone axis")
+                print("  Added cone axis")
 
     def visualize_torus(self, coefficients, critical_points, shape_points, cluster_id, i):
         shape_type="torus"
         if len(shape_points) > 0:
             point_cloud_guid = self.add_pointcloud_to_rhino(shape_points, "torus", cluster_id, i)
-            if point_cloud_guid:
+            #if point_cloud_guid:
                 # created_objects.append(guid)
-                print(f"  Added {shape_type} point cloud to Rhino ({len(shape_points)} points)")
+                #print("  Added " + str(shape_type) + " point cloud to Rhino (" + str(len(shape_points)) + " points)")
 
         try:
             # Get torus parameters using create_torus_geometry logic
@@ -561,9 +621,9 @@ class RhinoPointCloudProcessor:
             if arc_guid:
                 rs.ObjectColor(arc_guid, Color.Red)
                 rs.ObjectPrintWidth(arc_guid, 2.0)
-                rs.ObjectName(arc_guid, f"Torus_Cluster{cluster_id}_Shape{i+1}_ArcSpine")
+                rs.ObjectName(arc_guid, "Torus_Cluster" + str(cluster_id) + "_Shape" + str(i+1) + "_ArcSpine")
                 # created_objects.append(arc_guid)
-                print("  Added torus arc spine as geometric arc object")
+                #print("  Added torus arc spine as geometric arc object")
 
                 minor_radius = coefficients["minor_radius"]
                 # Create a circle at the start of the arc
@@ -579,11 +639,11 @@ class RhinoPointCloudProcessor:
                     pipe_guid = scriptcontext.doc.Objects.AddBrep(pipe_breps[0])
                     if pipe_guid:
                         rs.ObjectColor(pipe_guid, Color.White)
-                        rs.ObjectName(pipe_guid, f"Torus_Cluster{cluster_id}_Shape{i+1}_PipeSweep")
+                        rs.ObjectName(pipe_guid, "Torus_Cluster" + str(cluster_id) + "_Shape" + str(i+1) + "_PipeSweep")
                         # created_objects.append(pipe_guid)
-                        print("  Added torus pipe sweep on arc with radius", minor_radius)
+                        #print("  Added torus pipe sweep on arc with radius", minor_radius)
         except Exception as e:
-            print(f"  Error creating torus: {e}")
+            print("  Error creating torus: " + str(e))
 
     def add_pointcloud_to_rhino(self, points, shape_type, cluster_id, shape_id, color=None):
         """Add point cloud to Rhino document with attributes"""
@@ -605,71 +665,80 @@ class RhinoPointCloudProcessor:
             else:
                 color = Color.Gray
         
-        # Convert points to Rhino Point3d objects
-        rhino_points = []
+        # Efficient bulk insertion using RhinoCommon PointCloud
+        pc = rg.PointCloud()
 
-        # If NumPy is available and points is an ndarray, iterate efficiently
+        # If points is a NumPy array, handle bulk copy without building Python lists
         try:
-            if np is not None and hasattr(points, 'ndim') and getattr(points, 'ndim') == 2:
-                # Expect shape (N, >=3)
-                for i in range(points.shape[0]):
+            if np is not None and hasattr(points, 'ndim') and points.ndim == 2 and points.shape[1] >= 3:
+                n = points.shape[0]
+                # Try using PointCloud.Add for each point but avoid Python list allocations
+                for i in range(n):
                     x = float(points[i, 0]); y = float(points[i, 1]); z = float(points[i, 2])
-                    rhino_points.append(rg.Point3d(x, y, z))
+                    pt = rg.Point3d(x, y, z)
+                    pc.Add(pt)
+
+                # If normals are present (Nx6), set per-point normals
+                try:
+                    if points.shape[1] >= 6:
+                        # interpret as x,y,z,nx,ny,nz
+                        for i in range(n):
+                            nx = float(points[i, 3]); ny = float(points[i, 4]); nz = float(points[i, 5])
+                            # Rhino PointCloud stores normals per point as Vector3d when supported
+                            try:
+                                pc.SetPointNormal(i, rg.Vector3d(nx, ny, nz))
+                            except Exception:
+                                # older RhinoCommon may not expose SetPointNormal; ignore
+                                pass
+                except Exception:
+                    pass
             else:
+                # Generic iterable fallback
+                count = 0
                 for pt in points:
                     try:
                         if isinstance(pt, (list, tuple)) and len(pt) >= 3:
-                            # Standard [x, y, z] format
-                            rhino_points.append(rg.Point3d(float(pt[0]), float(pt[1]), float(pt[2])))
-                        elif isinstance(pt, (list, tuple)) and len(pt) == 1:
-                            # Single coordinate - likely an error in data format, skip these
-                            continue
-                        elif isinstance(pt, (int, float)):
-                            # Single number - likely an error in data format, skip these
-                            continue
+                            p = rg.Point3d(float(pt[0]), float(pt[1]), float(pt[2]))
+                            pc.Add(p)
+                            count += 1
                         else:
-                            print(f"  Warning: Unrecognized point format: {pt}")
-                    except (ValueError, IndexError) as e:
-                        print(f"  Warning: Could not convert point {pt}: {e}")
+                            # skip invalid entries
+                            continue
+                    except Exception:
                         continue
-
-        except Exception:
-            # Fallback to safe iteration over Python sequences
-            try:
-                for pt in points:
-                    if len(pt) >= 3:
-                        rhino_points.append(rg.Point3d(float(pt[0]), float(pt[1]), float(pt[2])))
-            except Exception:
-                print("  Warning: Failed to iterate points input; aborting")
-                return None
-
-        if len(rhino_points) == 0:
-            print(f"  Warning: No valid points for {shape_type} shape")
+                if count == 0:
+                    print("  Warning: No valid points for " + str(shape_type) + " shape")
+                    return None
+        except Exception as e:
+            print("  Warning: Failed to add points to Rhino PointCloud: " + str(e))
             return None
         
 
 
-        # 2. Create a new Rhino.Geometry.PointCloud object
-        point_cloud = rg.PointCloud()
+        # Add the constructed PointCloud to the Rhino document in one call
+        try:
+            guid = scriptcontext.doc.Objects.AddPointCloud(pc)
+        except Exception as e:
+            print("  Error adding PointCloud to Rhino document: " + str(e))
+            return None
 
-        # 3. Add the points to the point cloud
-        for point in rhino_points:
-            point_cloud.Add(point) # You can also add colors or normals here if needed
-
-        # 4. Add the point cloud to the Rhino document
-        # scriptcontext.doc.Objects.AddPointCloud() is a RhinoCommon method that adds the point cloud to the active Rhino document
-        guid =scriptcontext.doc.Objects.AddPointCloud(point_cloud) 
         if guid:
             # Set object attributes
-            rs.ObjectColor(guid, color)
-            rs.ObjectName(guid, f"{shape_type.title()}_Cluster{cluster_id}_Shape{shape_id}_Points")
-        
+            try:
+                rs.ObjectColor(guid, color)
+            except Exception:
+                pass
+            try:
+                rs.ObjectName(guid, shape_type.title() + "_Cluster" + str(cluster_id) + "_Shape" + str(shape_id) + "_Points")
+            except Exception:
+                pass
+
         return guid
     
     def visualize_results(self, results):
         """Visualize processing results in Rhino as point clouds"""
         if "error" in results:
-            print(f"Error in results: {results['error']}")
+            print("Error in results: " + str(results.get('error')))
             return []
         #cgal_results = results.get("cgal_results", {})
 
@@ -762,7 +831,7 @@ class RhinoPointCloudProcessor:
             # recurse into children
             children = node.get("children", [])
             for i, c in enumerate(children):
-                traverse_node(c, cluster_id, depth+1, f"{id_str}.{i}", created_objects)
+                traverse_node(c, cluster_id, depth+1, id_str + "." + str(i), created_objects)
         traverse_node(root, 0, 0, "0", created_objects)
 
         return created_objects
@@ -798,15 +867,15 @@ def run_pcl_processing(solver_type):
 
     
     # Step 3: Convert and process
-    print(f"\nStep 3: Processing {pointcloud.Count} points...")
+    print("\nStep 3: Processing " + str(pointcloud.Count) + " points...")
     
     # Convert to point list
     points = processor.pointcloud_to_list(pointcloud)
-    print(f"Converted {len(points)} points to processing format")
+    print("Converted " + str(len(points)) + " points to processing format")
     
     # Process via WSL
-    print("Sending to WSL for PCL+CGAL processing...")
-    results = processor.process_pointcloud_wsl(
+    print("Sending for PCL processing...")
+    results = processor.process_pointcloud(
         points, 
         solver_type=solver_type
     )
@@ -815,13 +884,13 @@ def run_pcl_processing(solver_type):
     print("\nStep 4: Visualizing Results")
     if "error" not in results:
         created_objects = processor.visualize_results(results)
-        # print(f"\nProcessing complete! Created {len(created_objects)} geometry objects.")
+    # print("\nProcessing complete! Created " + str(len(created_objects)) + " geometry objects.")
         print("Check the Rhino viewport for detected shapes.")
         return True
-        # , f"Successfully processed {len(points)} points and created {len(created_objects)} objects"
+    # , "Successfully processed " + str(len(points)) + " points and created " + str(len(created_objects)) + " objects"
 
     else:
-        error_msg = f"Processing failed: {results['error']}"
+        error_msg = "Processing failed: " + str(results.get('error'))
         print(error_msg)
         return False, error_msg
     
