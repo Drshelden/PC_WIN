@@ -41,11 +41,34 @@ Run the demo using the workspace Python interpreter:
 python .\main.py .\data\quad.xyz
 ```
 
+## Recommended Comprehensive Test Run
+
+From repository root, run:
+
+```powershell
+.\tests\pcl_hybrid\run_test_flow.ps1 -Config Release
+```
+
+What this does by default:
+1. Preflight environment checks.
+2. Configure + build native and Python targets.
+3. Run C++ CLI test.
+4. Run Python CLI + smoke test.
+5. Run pytest buffer test.
+6. Print Rhino manual validation steps.
+
+The script is strict for Python test prerequisites and will fail fast with guidance if required modules are missing.
+
 ## Notes & troubleshooting
 
 - If the Python import fails (can't load .pyd), ensure that the directory containing the built .pyd (`build\\Debug`) is on your PATH and `sys.path`. The demo script already prepends that directory when present.
 - If CMake cannot find PCL or pybind11, make sure you've installed the packages via vcpkg for the matching triplet (`x64-windows`) and passed the vcpkg toolchain file to CMake.
 - For MSVC parallel-build PDB collisions you may see errors — the CMake files set `/FS` on relevant targets to mitigate this.
+- For comprehensive test runs, ensure Python has required test modules:
+
+```powershell
+C:\_LOCAL\GitHub\PC_WIN\.venv\Scripts\python.exe -m pip install pytest numpy
+```
 
 ## VS Code debug
 

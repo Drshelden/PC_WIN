@@ -7,19 +7,63 @@ import sys
 import os
 import json
 
-# make sure the extension and PCL DLLs can be found when importing
-bd = os.path.abspath(os.path.join(os.path.dirname(__file__), 'build', 'Debug'))
-if os.path.isdir(bd):
-    # Prepend to PATH so Windows loader can find dependent DLLs (PCL etc.)
-    os.environ['PATH'] = bd + os.pathsep + os.environ.get('PATH', '')
-    # Prepend to sys.path so Python can find the pyd
-    sys.path.insert(0, bd)
+# Make sure the extension and dependent DLLs can be found when importing.
+# Prefer an explicitly requested build dir from the runner, then fall back.
+base_dir = os.path.dirname(__file__)
+preferred_build_dir = os.environ.get('PCL_HYBRID_BUILD_DIR', '').strip()
+candidate_build_dirs = []
+if preferred_build_dir:
+    candidate_build_dirs.append(os.path.abspath(preferred_build_dir))
+candidate_build_dirs.extend([
+    os.path.abspath(os.path.join(base_dir, 'build_py39', 'Release')),
+    os.path.abspath(os.path.join(base_dir, 'build_py39', 'Debug')),
+    os.path.abspath(os.path.join(base_dir, 'build', 'Debug')),
+])
+
+# De-duplicate while preserving order.
+seen = set()
+candidate_build_dirs = [d for d in candidate_build_dirs if not (d in seen or seen.add(d))]
+
+# On Windows/Python 3.8+, explicitly registering DLL directories is more reliable
+# than relying only on PATH for extension-module dependencies.
+dll_dir_handles = []
+dll_dirs_env = os.environ.get('PCL_HYBRID_DLL_DIRS', '').strip()
+candidate_dll_dirs = []
+if dll_dirs_env:
+    candidate_dll_dirs.extend([d for d in dll_dirs_env.split(os.pathsep) if d])
+candidate_dll_dirs.extend(candidate_build_dirs)
+
+seen_dll = set()
+candidate_dll_dirs = [d for d in candidate_dll_dirs if not (d in seen_dll or seen_dll.add(d))]
+
+if hasattr(os, 'add_dll_directory'):
+    for d in candidate_dll_dirs:
+        if os.path.isdir(d):
+            try:
+                dll_dir_handles.append(os.add_dll_directory(d))
+            except OSError:
+                pass
+for bd in candidate_build_dirs:
+    if os.path.isdir(bd):
+        pass
+
+existing_path = os.environ.get('PATH', '')
+valid_build_dirs = [bd for bd in candidate_build_dirs if os.path.isdir(bd)]
+
+# Prepend in intended priority order (left-to-right), without accidental reversal.
+if valid_build_dirs:
+    os.environ['PATH'] = os.pathsep.join(valid_build_dirs + [existing_path]) if existing_path else os.pathsep.join(valid_build_dirs)
+
+# Keep the same intended priority in sys.path.
+for bd in reversed(valid_build_dirs):
+    if bd not in sys.path:
+        sys.path.insert(0, bd)
 
 try:
     import pcl_hybrid_py as ph
 except Exception as e:
     print('Failed to import pcl_hybrid_py:', e)
-    print('Make sure you built the extension and that build/Debug is on PATH/sys.path')
+    print('Make sure you built the extension and that the selected build dir is on PATH/sys.path')
     sys.exit(-10)
 
 # Return codes should match the C++ program's constants when possible

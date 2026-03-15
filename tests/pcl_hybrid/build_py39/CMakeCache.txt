@@ -42,6 +42,9 @@ Boost_SYSTEM_LIBRARY_RELEASE:STRING=C:/Program Files/PCL 1.14.1/3rdParty/Boost/l
 //Path to a program.
 CMAKE_AR:FILEPATH=C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/lib.exe
 
+//No help, variable specified on the command line.
+CMAKE_BUILD_TYPE:UNINITIALIZED=$Config
+
 //Semicolon separated list of supported configuration types, only
 // supports Debug, Release, MinSizeRel, and RelWithDebInfo, anything
 // else will be ignored.
@@ -216,6 +219,9 @@ CMAKE_TOOLCHAIN_FILE:UNINITIALIZED=C:\vcpkg\scripts\buildsystems\vcpkg.cmake
 // Studio IDE projects all commands are done without /nologo.
 CMAKE_VERBOSE_MAKEFILE:BOOL=FALSE
 
+//The directory containing a CMake configuration file for Eigen3.
+Eigen3_DIR:PATH=C:/vcpkg/installed/x64-windows/share/eigen3
+
 //OpenGL library for win32
 OPENGL_gl_LIBRARY:STRING=opengl32
 
@@ -246,8 +252,8 @@ PCL_COMMON_LIBRARY:FILEPATH=C:/Program Files/PCL 1.14.1/lib/pcl_common.lib
 //path to pcl_common library debug
 PCL_COMMON_LIBRARY_DEBUG:FILEPATH=C:/Program Files/PCL 1.14.1/lib/pcl_commond.lib
 
-//The directory containing a CMake configuration file for PCL.
-PCL_DIR:PATH=C:/Program Files/PCL 1.14.1/cmake
+//No help, variable specified on the command line.
+PCL_DIR:UNINITIALIZED=C:\vcpkg\installed\x64-windows\share\pcl
 
 //path to features headers
 PCL_FEATURES_INCLUDE_DIR:PATH=C:/Program Files/PCL 1.14.1/include/pcl-1.14
@@ -278,6 +284,15 @@ PCL_IO_LIBRARY:FILEPATH=C:/Program Files/PCL 1.14.1/lib/pcl_io.lib
 
 //path to pcl_io library debug
 PCL_IO_LIBRARY_DEBUG:FILEPATH=C:/Program Files/PCL 1.14.1/lib/pcl_iod.lib
+
+//path to io_ply headers
+PCL_IO_PLY_INCLUDE_DIR:PATH=C:/vcpkg/installed/x64-windows/include
+
+//path to pcl_io_ply library
+PCL_IO_PLY_LIBRARY:FILEPATH=C:/vcpkg/installed/x64-windows/lib/pcl_io_ply.lib
+
+//path to pcl_io_ply library debug
+PCL_IO_PLY_LIBRARY_DEBUG:FILEPATH=C:/vcpkg/installed/x64-windows/debug/lib/pcl_io_plyd.lib
 
 //path to kdtree headers
 PCL_KDTREE_INCLUDE_DIR:PATH=C:/Program Files/PCL 1.14.1/include/pcl-1.14
@@ -348,6 +363,15 @@ PKG_CONFIG_ARGN:STRING=
 //pkg-config executable
 PKG_CONFIG_EXECUTABLE:FILEPATH=PKG_CONFIG_EXECUTABLE-NOTFOUND
 
+//Path to a library.
+PNG_LIBRARY_DEBUG:FILEPATH=PNG_LIBRARY_DEBUG-NOTFOUND
+
+//Path to a library.
+PNG_LIBRARY_RELEASE:FILEPATH=C:/vcpkg/installed/x64-windows/lib/libpng16.lib
+
+//Path to a file.
+PNG_PNG_INCLUDE_DIR:PATH=C:/vcpkg/installed/x64-windows/include
+
 //Overwrite cached values read from Python library (classic search).
 // Turn off if cross-compiling and manually setting these values.
 PYBIND11_PYTHONLIBS_OVERWRITE:BOOL=ON
@@ -356,7 +380,7 @@ PYBIND11_PYTHONLIBS_OVERWRITE:BOOL=ON
 PYBIND11_PYTHON_VERSION:STRING=
 
 //Path to a program.
-PYTHON_EXECUTABLE:FILEPATH=C:/Program Files/Python39/python.exe
+PYTHON_EXECUTABLE:FILEPATH=C:/_LOCAL/GitHub/PC_WIN/.venv/Scripts/python.exe
 
 //No help, variable specified on the command line.
 PYTHON_INCLUDE_DIR:UNINITIALIZED=C:\Program Files\Python39\include
@@ -399,7 +423,7 @@ VCPKG_TRACE_FIND_PACKAGE:BOOL=OFF
 VCPKG_VERBOSE:BOOL=OFF
 
 //Enable visualization (1=on, 0=off)
-VISUALIZE:BOOL=ON
+VISUALIZE:BOOL=OFF
 
 //The directory containing VTKConfig.cmake
 VTK_DIR:PATH=C:/Program Files/PCL 1.14.1/3rdParty/VTK/lib/cmake/vtk-9.3
@@ -411,6 +435,15 @@ X_VCPKG_APPLOCAL_DEPS_INSTALL:BOOL=OFF
 //(experimental) Add USES_TERMINAL to VCPKG_APPLOCAL_DEPS to force
 // serialization.
 X_VCPKG_APPLOCAL_DEPS_SERIALIZED:BOOL=OFF
+
+//Path to a file.
+ZLIB_INCLUDE_DIR:PATH=C:/vcpkg/installed/x64-windows/include
+
+//Path to a library.
+ZLIB_LIBRARY_DEBUG:FILEPATH=ZLIB_LIBRARY_DEBUG-NOTFOUND
+
+//Path to a library.
+ZLIB_LIBRARY_RELEASE:FILEPATH=C:/vcpkg/installed/x64-windows/lib/zlib.lib
 
 //Path to a program.
 Z_VCPKG_BUILTIN_POWERSHELL_PATH:FILEPATH=C:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe
@@ -609,7 +642,7 @@ FIND_PACKAGE_MESSAGE_DETAILS_OpenMP_CXX:INTERNAL=[-openmp][v2.0()]
 //Details about finding OpenNI2
 FIND_PACKAGE_MESSAGE_DETAILS_OpenNI2:INTERNAL=[C:/Program Files/OpenNI2/Lib/OpenNI2.lib][C:/Program Files/OpenNI2/Include][v2.2.0.33()]
 //Details about finding PCL
-FIND_PACKAGE_MESSAGE_DETAILS_PCL:INTERNAL=[common;io;features;segmentation;visualization;pcl_common;pcl_octree;pcl_io;pcl_kdtree;pcl_search;pcl_sample_consensus;pcl_filters;pcl_features;pcl_ml;pcl_segmentation;pcl_visualization;Boost::system;Boost::iostreams;Boost::filesystem;Boost::serialization;C:/Program Files/OpenNI2/Lib/OpenNI2.lib;VTK::ChartsCore;VTK::CommonColor;VTK::CommonComputationalGeometry;VTK::CommonCore;VTK::CommonDataModel;VTK::CommonExecutionModel;VTK::CommonMath;VTK::CommonMisc;VTK::CommonTransforms;VTK::FiltersCore;VTK::FiltersExtraction;VTK::FiltersGeneral;VTK::FiltersGeometry;VTK::FiltersModeling;VTK::FiltersSources;VTK::ImagingCore;VTK::ImagingSources;VTK::InteractionImage;VTK::InteractionStyle;VTK::InteractionWidgets;VTK::IOCore;VTK::IOGeometry;VTK::IOImage;VTK::IOLegacy;VTK::IOPLY;VTK::RenderingAnnotation;VTK::RenderingCore;VTK::RenderingContext2D;VTK::RenderingLOD;VTK::RenderingFreeType;VTK::ViewsCore;VTK::ViewsContext2D;VTK::RenderingOpenGL2;VTK::RenderingContextOpenGL2;FLANN::FLANN][C:/Program Files/PCL 1.14.1/include/pcl-1.14;C:/Program Files/PCL 1.14.1/3rdParty/Eigen3/include/eigen3;C:/Program Files/PCL 1.14.1/3rdParty/Boost/include/boost-1_84;C:/Program Files/OpenNI2/Include][v()]
+FIND_PACKAGE_MESSAGE_DETAILS_PCL:INTERNAL=[common;io;features;segmentation;pcl_common;pcl_octree;pcl_io_ply;pcl_io;pcl_kdtree;pcl_search;pcl_sample_consensus;pcl_filters;pcl_features;pcl_ml;pcl_segmentation;Boost::system;Boost::iostreams;Boost::filesystem;Boost::serialization;FLANN::FLANN][C:/vcpkg/installed/x64-windows/include;C:/vcpkg/installed/x64-windows/include/eigen3;C:/Program Files/PCL 1.14.1/3rdParty/Boost/include/boost-1_84;C:/Program Files/PCL 1.14.1/include/pcl-1.14][v()]
 //Details about finding PCL_2D
 FIND_PACKAGE_MESSAGE_DETAILS_PCL_2D:INTERNAL=[C:/Program Files/PCL 1.14.1/include/pcl-1.14][v()]
 //Details about finding PCL_COMMON
@@ -622,6 +655,8 @@ FIND_PACKAGE_MESSAGE_DETAILS_PCL_FILTERS:INTERNAL=[C:/Program Files/PCL 1.14.1/l
 FIND_PACKAGE_MESSAGE_DETAILS_PCL_GEOMETRY:INTERNAL=[C:/Program Files/PCL 1.14.1/include/pcl-1.14][v()]
 //Details about finding PCL_IO
 FIND_PACKAGE_MESSAGE_DETAILS_PCL_IO:INTERNAL=[C:/Program Files/PCL 1.14.1/lib/pcl_io.lib][C:/Program Files/PCL 1.14.1/include/pcl-1.14][v()]
+//Details about finding PCL_IO_PLY
+FIND_PACKAGE_MESSAGE_DETAILS_PCL_IO_PLY:INTERNAL=[C:/vcpkg/installed/x64-windows/lib/pcl_io_ply.lib][C:/vcpkg/installed/x64-windows/include][v()]
 //Details about finding PCL_KDTREE
 FIND_PACKAGE_MESSAGE_DETAILS_PCL_KDTREE:INTERNAL=[C:/Program Files/PCL 1.14.1/lib/pcl_kdtree.lib][C:/Program Files/PCL 1.14.1/include/pcl-1.14][v()]
 //Details about finding PCL_ML
@@ -636,10 +671,14 @@ FIND_PACKAGE_MESSAGE_DETAILS_PCL_SEARCH:INTERNAL=[C:/Program Files/PCL 1.14.1/li
 FIND_PACKAGE_MESSAGE_DETAILS_PCL_SEGMENTATION:INTERNAL=[C:/Program Files/PCL 1.14.1/lib/pcl_segmentation.lib][C:/Program Files/PCL 1.14.1/include/pcl-1.14][v()]
 //Details about finding PCL_VISUALIZATION
 FIND_PACKAGE_MESSAGE_DETAILS_PCL_VISUALIZATION:INTERNAL=[C:/Program Files/PCL 1.14.1/lib/pcl_visualization.lib][C:/Program Files/PCL 1.14.1/include/pcl-1.14][v()]
+//Details about finding PNG
+FIND_PACKAGE_MESSAGE_DETAILS_PNG:INTERNAL=[C:/vcpkg/installed/x64-windows/lib/libpng16.lib][C:/vcpkg/installed/x64-windows/include][v1.6.50()]
 //Details about finding PYTHON
-FIND_PACKAGE_MESSAGE_DETAILS_PYTHON:INTERNAL=C:/Program Files/Python39/python.exe3.9.10
+FIND_PACKAGE_MESSAGE_DETAILS_PYTHON:INTERNAL=C:/_LOCAL/GitHub/PC_WIN/.venv/Scripts/python.exe3.9.10
 //Details about finding Threads
 FIND_PACKAGE_MESSAGE_DETAILS_Threads:INTERNAL=[TRUE][v()]
+//Details about finding ZLIB
+FIND_PACKAGE_MESSAGE_DETAILS_ZLIB:INTERNAL=[C:/vcpkg/installed/x64-windows/lib/zlib.lib][C:/vcpkg/installed/x64-windows/include][ ][v1.3.1()]
 //Details about finding nlohmann_json
 FIND_PACKAGE_MESSAGE_DETAILS_nlohmann_json:INTERNAL=[C:/vcpkg/installed/x64-windows/share/nlohmann_json/nlohmann_jsonConfig.cmake][v3.12.0()]
 //Test HAS_MSVC_GL_LTCG
@@ -686,6 +725,12 @@ PCL_IO_INCLUDE_DIR-ADVANCED:INTERNAL=1
 PCL_IO_LIBRARY-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: PCL_IO_LIBRARY_DEBUG
 PCL_IO_LIBRARY_DEBUG-ADVANCED:INTERNAL=1
+//ADVANCED property for variable: PCL_IO_PLY_INCLUDE_DIR
+PCL_IO_PLY_INCLUDE_DIR-ADVANCED:INTERNAL=1
+//ADVANCED property for variable: PCL_IO_PLY_LIBRARY
+PCL_IO_PLY_LIBRARY-ADVANCED:INTERNAL=1
+//ADVANCED property for variable: PCL_IO_PLY_LIBRARY_DEBUG
+PCL_IO_PLY_LIBRARY_DEBUG-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: PCL_KDTREE_INCLUDE_DIR
 PCL_KDTREE_INCLUDE_DIR-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: PCL_KDTREE_LIBRARY
@@ -753,6 +798,12 @@ PC_OPENNI2_VERSION:INTERNAL=
 PKG_CONFIG_ARGN-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: PKG_CONFIG_EXECUTABLE
 PKG_CONFIG_EXECUTABLE-ADVANCED:INTERNAL=1
+//ADVANCED property for variable: PNG_LIBRARY_DEBUG
+PNG_LIBRARY_DEBUG-ADVANCED:INTERNAL=1
+//ADVANCED property for variable: PNG_LIBRARY_RELEASE
+PNG_LIBRARY_RELEASE-ADVANCED:INTERNAL=1
+//ADVANCED property for variable: PNG_PNG_INCLUDE_DIR
+PNG_PNG_INCLUDE_DIR-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: PYTHON_EXECUTABLE
 PYTHON_EXECUTABLE-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: PYTHON_INCLUDE_DIR
@@ -779,6 +830,12 @@ VCPKG_MANIFEST_INSTALL:INTERNAL=OFF
 VCPKG_VERBOSE-ADVANCED:INTERNAL=1
 //Number of processors available to run parallel tests.
 VTK_MPI_NUMPROCS:INTERNAL=2
+//ADVANCED property for variable: ZLIB_INCLUDE_DIR
+ZLIB_INCLUDE_DIR-ADVANCED:INTERNAL=1
+//ADVANCED property for variable: ZLIB_LIBRARY_DEBUG
+ZLIB_LIBRARY_DEBUG-ADVANCED:INTERNAL=1
+//ADVANCED property for variable: ZLIB_LIBRARY_RELEASE
+ZLIB_LIBRARY_RELEASE-ADVANCED:INTERNAL=1
 //Making sure VCPKG_MANIFEST_MODE doesn't change
 Z_VCPKG_CHECK_MANIFEST_MODE:INTERNAL=OFF
 //The path to the PowerShell implementation to use.
