@@ -184,95 +184,57 @@ void PlaneShape::setCriticalPoints() {
 // CylinderShape: simple PCA axis and radius estimate; critical points are axis endpoints
 void CylinderShape::setCoefficients() {
     if (!points_ || points_->empty()) return;
-    // Build local arrays of point positions and (optional) normals if available
-    std::vector<Eigen::Vector3d> P;
-    P.reserve(points_->size());
-    for (const auto &pt : points_->points) P.emplace_back(pt.x, pt.y, pt.z);
-
-    // For sampling we need normals. We will estimate normals locally via PCA on k-neighbors
-    // Build a temporary PCL cloud and compute normals if needed
-    pcl::PointCloud<pcl::PointXYZ>::Ptr tmp(new pcl::PointCloud<pcl::PointXYZ>());
-    for (const auto &pt : points_->points) tmp->push_back(pt);
-    pcl::NormalEstimation<pcl::PointXYZ, pcl::Normal> ne;
-    pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>());
-    ne.setInputCloud(tmp);
-    ne.setSearchMethod(tree);
-    ne.setKSearch(std::min<size_t>(30, tmp->size()));
-    pcl::PointCloud<pcl::Normal> normals;
-    ne.compute(normals);
-
-    // Determine the weak axis (cylinder plane) from cylinder_label_: 0->X weak axis is X, etc.
+    // Determine the weak axis from labels: 0->X, 1->Y, 2->Z.
     int weak_axis = cylinder_label_ >= 0 ? cylinder_label_ : 2;
+    int a = (weak_axis + 1) % 3;
+    int b = (weak_axis + 2) % 3;
 
-    // sampling parameters
-    std::mt19937 rng(12345);
-    size_t sampleN = std::min<size_t>(30, P.size());
+    const size_t n = points_->size();
+    Eigen::MatrixXd A(n, 3);
+    Eigen::VectorXd rhs(n);
 
-    std::vector<Eigen::Vector3d> pint_accum;
-    pint_accum.reserve(sampleN);
+    double axis_min = std::numeric_limits<double>::infinity();
 
-    std::uniform_int_distribution<size_t> dist(0, P.size()-1);
-    for (size_t s=0; s<sampleN; ++s) {
-        size_t i1 = dist(rng);
-        size_t i2 = dist(rng);
-        if (i1 == i2) continue;
-        Eigen::Vector3d p1 = P[i1]; Eigen::Vector3d p2 = P[i2];
-        Eigen::Vector3d n1(0,0,1), n2(0,0,1);
-        if (i1 < normals.size()) n1 = Eigen::Vector3d(normals[i1].normal_x, normals[i1].normal_y, normals[i1].normal_z);
-        if (i2 < normals.size()) n2 = Eigen::Vector3d(normals[i2].normal_x, normals[i2].normal_y, normals[i2].normal_z);
+    // Fit circle in the plane orthogonal to axis:
+    // u^2 + v^2 + alpha*u + beta*v + gamma = 0
+    for (size_t i = 0; i < n; ++i) {
+        Eigen::Vector3d p(points_->points[i].x, points_->points[i].y, points_->points[i].z);
+        double u = p[a];
+        double v = p[b];
+        A(static_cast<Eigen::Index>(i), 0) = u;
+        A(static_cast<Eigen::Index>(i), 1) = v;
+        A(static_cast<Eigen::Index>(i), 2) = 1.0;
+        rhs(static_cast<Eigen::Index>(i)) = -(u * u + v * v);
 
-        // zero the weak axis coordinate to project into the governing plane
-        if (weak_axis == 0) { p1.x() = 0; p2.x() = 0; n1.x() = 0; n2.x() = 0; }
-        else if (weak_axis == 1) { p1.y() = 0; p2.y() = 0; n1.y() = 0; n2.y() = 0; }
-        else { p1.z() = 0; p2.z() = 0; n1.z() = 0; n2.z() = 0; }
-
-        // In-plane intersection of lines p1 + t*n1 and p2 + u*n2.
-        // Solve for intersection in 2D by choosing two coordinates that remain (indices a,b)
-        int a = (weak_axis + 1) % 3; int b = (weak_axis + 2) % 3;
-        double x1 = p1[a], y1 = p1[b], dx1 = n1[a], dy1 = n1[b];
-        double x2 = p2[a], y2 = p2[b], dx2 = n2[a], dy2 = n2[b];
-        double denom = dx1*dy2 - dy1*dx2;
-        if (std::abs(denom) < 1e-9) continue; // parallel
-        double t = ( (x2 - x1)*dy2 - (y2 - y1)*dx2 ) / denom;
-        Eigen::Vector3d pint;
-        // reconstruct full 3D pint by inserting the remaining coordinate as 0 in weak axis slot
-        for (int k=0;k<3;++k) pint[k] = 0.0;
-        pint[a] = x1 + t*dx1; pint[b] = y1 + t*dy1;
-        pint_accum.push_back(pint);
+        axis_min = std::min(axis_min, p[weak_axis]);
     }
 
-    if (pint_accum.empty()) {
-        // fallback to centroid
-        Eigen::Vector3d centroid(0,0,0); for (auto &p : P) centroid += p; centroid /= P.size();
-        (*coefficients_)[0] = centroid.x(); (*coefficients_)[1] = centroid.y(); (*coefficients_)[2] = centroid.z();
-        // axis is the weak axis unit vector
-        Eigen::Vector3d axis(0,0,0); axis[weak_axis] = 1.0;
-        (*coefficients_)[3] = axis.x(); (*coefficients_)[4] = axis.y(); (*coefficients_)[5] = axis.z();
-        // radius average
-        double rsum = 0; for (auto &p : P) { Eigen::Vector3d v = p - centroid; Eigen::Vector3d proj = axis*(v.dot(axis)); rsum += (v - proj).norm(); }
-        (*coefficients_)[6] = rsum / P.size();
-        return;
-    }
+    Eigen::Vector3d sol = A.colPivHouseholderQr().solve(rhs);
+    double alpha = sol[0];
+    double beta = sol[1];
+    double gamma = sol[2];
 
-    // average pint to get porig
-    Eigen::Vector3d porig(0,0,0); for (auto &pp : pint_accum) porig += pp; porig /= pint_accum.size();
-    // axis is weak-axis unit vector
-    Eigen::Vector3d axis(0,0,0); axis[weak_axis] = 1.0;
+    double center_u = -0.5 * alpha;
+    double center_v = -0.5 * beta;
+    double radius_sq = center_u * center_u + center_v * center_v - gamma;
+    if (radius_sq < 0.0) radius_sq = 0.0;
+    double radius = std::sqrt(radius_sq);
 
-    // project points onto axis, find min/max projections and average perpendicular distance
-    double amin = std::numeric_limits<double>::infinity(), amax = -std::numeric_limits<double>::infinity();
-    double rsum = 0.0;
-    for (const auto &p : P) {
-        Eigen::Vector3d v = p - porig;
-        double proj = v.dot(axis);
-        amin = std::min(amin, proj); amax = std::max(amax, proj);
-        Eigen::Vector3d perp = v - proj*axis; rsum += perp.norm();
-    }
-    double radius = rsum / P.size();
+    Eigen::Vector3d p1(0.0, 0.0, 0.0);
+    p1[weak_axis] = axis_min;
+    p1[a] = center_u;
+    p1[b] = center_v;
 
-    Eigen::Vector3d p1 = porig + axis * amin;
-    (*coefficients_)[0] = p1.x(); (*coefficients_)[1] = p1.y(); (*coefficients_)[2] = p1.z();
-    (*coefficients_)[3] = axis.x(); (*coefficients_)[4] = axis.y(); (*coefficients_)[5] = axis.z(); (*coefficients_)[6] = radius;
+    Eigen::Vector3d axis(0.0, 0.0, 0.0);
+    axis[weak_axis] = 1.0;
+
+    (*coefficients_)[0] = p1.x();
+    (*coefficients_)[1] = p1.y();
+    (*coefficients_)[2] = p1.z();
+    (*coefficients_)[3] = axis.x();
+    (*coefficients_)[4] = axis.y();
+    (*coefficients_)[5] = axis.z();
+    (*coefficients_)[6] = radius;
 }
 
 void CylinderShape::setCriticalPoints() {
