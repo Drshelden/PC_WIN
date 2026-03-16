@@ -66,9 +66,11 @@ class CylinderShape : public Shape {
 public:
     using CoeffPtr = std::shared_ptr<std::vector<double>>; // px,py,pz, dx,dy,dz, radius (7)
     using CritPtr = std::shared_ptr<std::vector<PointT>>;
+    using NormalsPtr = pcl::PointCloud<pcl::Normal>::Ptr;
 
-    CylinderShape(const PointCloudPtr& pts, int cylinder_label = -1)
-        : points_(pts), cylinder_label_(cylinder_label) {
+    CylinderShape(const PointCloudPtr& pts, int cylinder_label = -1,
+                  NormalsPtr normals = nullptr)
+        : points_(pts), cylinder_label_(cylinder_label), normals_(normals) {
         coefficients_ = std::make_shared<std::vector<double>>(7, 0.0);
         critical_points_ = std::make_shared<std::vector<PointT>>();
         setCoefficients();
@@ -91,6 +93,7 @@ public:
 private:
     PointCloudPtr points_;
     int cylinder_label_ = -1;
+        NormalsPtr normals_;
     CoeffPtr coefficients_;
     CritPtr critical_points_;
 };

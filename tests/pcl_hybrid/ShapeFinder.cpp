@@ -212,7 +212,10 @@ int ShapeFinder::findShapes(const PCWin_PointCloud& pc) {
                 }
                 int dominant_cylinder_label = -1; int cbest = 0;
                 for (auto &kv : cfreq) if (kv.second > cbest) { cbest = kv.second; dominant_cylinder_label = kv.first; }
-                std::shared_ptr<Shape> child = std::make_shared<CylinderShape>(child_cloud, dominant_cylinder_label);
+                // collect matching normals for this cluster
+                pcl::PointCloud<pcl::Normal>::Ptr child_normals(new pcl::PointCloud<pcl::Normal>());
+                for (int idx : cl.indices) child_normals->push_back(parent_normals->at(idx));
+                std::shared_ptr<Shape> child = std::make_shared<CylinderShape>(child_cloud, dominant_cylinder_label, child_normals);
                 rootShape->addChild(child);
                 clusters.push_back(child_cloud);
                 clusterPlaneLabels.push_back(dominant_cylinder_label);

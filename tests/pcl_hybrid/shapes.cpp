@@ -181,59 +181,194 @@ void PlaneShape::setCriticalPoints() {
     }
 }
 
-// CylinderShape: simple PCA axis and radius estimate; critical points are axis endpoints
+// CylinderShape: fit axis and radius using projected surface normals.
+// Each projected surface normal should pass through the cylinder center in the cross-section plane.
+// We intersect many normal pairs, keep the consistent intersections, and then average them.
 void CylinderShape::setCoefficients() {
     if (!points_ || points_->empty()) return;
-    // Determine the weak axis from labels: 0->X, 1->Y, 2->Z.
     int weak_axis = cylinder_label_ >= 0 ? cylinder_label_ : 2;
     int a = (weak_axis + 1) % 3;
     int b = (weak_axis + 2) % 3;
 
     const size_t n = points_->size();
-    Eigen::MatrixXd A(n, 3);
-    Eigen::VectorXd rhs(n);
-
     double axis_min = std::numeric_limits<double>::infinity();
+    double cx = 0.0, cy = 0.0;
+    bool fit_from_normals = false;
 
-    // Fit circle in the plane orthogonal to axis:
-    // u^2 + v^2 + alpha*u + beta*v + gamma = 0
-    for (size_t i = 0; i < n; ++i) {
-        Eigen::Vector3d p(points_->points[i].x, points_->points[i].y, points_->points[i].z);
-        double u = p[a];
-        double v = p[b];
-        A(static_cast<Eigen::Index>(i), 0) = u;
-        A(static_cast<Eigen::Index>(i), 1) = v;
-        A(static_cast<Eigen::Index>(i), 2) = 1.0;
-        rhs(static_cast<Eigen::Index>(i)) = -(u * u + v * v);
+    if (normals_ && normals_->size() == n) {
+        struct ProjectedSample {
+            double u;
+            double v;
+            double nu;
+            double nv;
+        };
+        std::vector<ProjectedSample> samples;
+        samples.reserve(n);
 
-        axis_min = std::min(axis_min, p[weak_axis]);
+        for (size_t i = 0; i < n; ++i) {
+            Eigen::Vector3d p(points_->points[i].x, points_->points[i].y, points_->points[i].z);
+            double u = p[a], v = p[b];
+            axis_min = std::min(axis_min, p[weak_axis]);
+
+            const auto& nm = normals_->points[i];
+            double raw_nu = (a == 0) ? nm.normal_x : (a == 1) ? nm.normal_y : nm.normal_z;
+            double raw_nv = (b == 0) ? nm.normal_x : (b == 1) ? nm.normal_y : nm.normal_z;
+
+            double nlen = std::sqrt(raw_nu*raw_nu + raw_nv*raw_nv);
+            if (nlen < 1e-7) continue;
+
+            samples.push_back({u, v, raw_nu / nlen, raw_nv / nlen});
+        }
+
+        if (samples.size() >= 2) {
+            std::vector<std::pair<double, double>> intersections;
+            const size_t sample_count = samples.size();
+            const size_t max_pairs = 4000;
+            std::mt19937 rng(0);
+            std::uniform_int_distribution<size_t> dist(0, sample_count - 1);
+
+            auto push_intersection = [&](const ProjectedSample& s1, const ProjectedSample& s2) {
+                double det = s1.nu * s2.nv - s1.nv * s2.nu;
+                if (std::abs(det) < 0.05) return;
+
+                double du = s2.u - s1.u;
+                double dv = s2.v - s1.v;
+                double t = (du * s2.nv - dv * s2.nu) / det;
+                double ix = s1.u + t * s1.nu;
+                double iy = s1.v + t * s1.nv;
+                if (std::isfinite(ix) && std::isfinite(iy)) intersections.emplace_back(ix, iy);
+            };
+
+            if (sample_count <= 90) {
+                for (size_t i = 0; i + 1 < sample_count; ++i) {
+                    for (size_t j = i + 1; j < sample_count; ++j) {
+                        push_intersection(samples[i], samples[j]);
+                    }
+                }
+            } else {
+                for (size_t pair_index = 0; pair_index < max_pairs; ++pair_index) {
+                    size_t i = dist(rng);
+                    size_t j = dist(rng);
+                    if (i == j) continue;
+                    push_intersection(samples[i], samples[j]);
+                }
+            }
+
+            if (!intersections.empty()) {
+                auto median_coord = [](std::vector<double>& values) {
+                    const size_t mid = values.size() / 2;
+                    std::nth_element(values.begin(), values.begin() + mid, values.end());
+                    double med = values[mid];
+                    if ((values.size() % 2) == 0) {
+                        std::nth_element(values.begin(), values.begin() + mid - 1, values.end());
+                        med = 0.5 * (med + values[mid - 1]);
+                    }
+                    return med;
+                };
+
+                std::vector<double> xs;
+                std::vector<double> ys;
+                xs.reserve(intersections.size());
+                ys.reserve(intersections.size());
+                for (const auto& pt : intersections) {
+                    xs.push_back(pt.first);
+                    ys.push_back(pt.second);
+                }
+
+                double median_x = median_coord(xs);
+                double median_y = median_coord(ys);
+
+                std::vector<std::pair<double, size_t>> ranked;
+                ranked.reserve(intersections.size());
+                for (size_t i = 0; i < intersections.size(); ++i) {
+                    double dx = intersections[i].first - median_x;
+                    double dy = intersections[i].second - median_y;
+                    ranked.emplace_back(dx * dx + dy * dy, i);
+                }
+                std::sort(ranked.begin(), ranked.end(), [](const auto& lhs, const auto& rhs) {
+                    return lhs.first < rhs.first;
+                });
+
+                const size_t keep_count = std::max<size_t>(1, ranked.size() * 3 / 5);
+                double sum_x = 0.0;
+                double sum_y = 0.0;
+                for (size_t i = 0; i < keep_count; ++i) {
+                    const auto& pt = intersections[ranked[i].second];
+                    sum_x += pt.first;
+                    sum_y += pt.second;
+                }
+                cx = sum_x / static_cast<double>(keep_count);
+                cy = sum_y / static_cast<double>(keep_count);
+                fit_from_normals = true;
+            }
+        }
     }
 
-    Eigen::Vector3d sol = A.colPivHouseholderQr().solve(rhs);
-    double alpha = sol[0];
-    double beta = sol[1];
-    double gamma = sol[2];
+    if (!fit_from_normals) {
+        // --- Fallback: algebraic least-squares circle fit ---
+        Eigen::MatrixXd A(n, 3);
+        Eigen::VectorXd rhs(n);
+        for (size_t i = 0; i < n; ++i) {
+            Eigen::Vector3d p(points_->points[i].x, points_->points[i].y, points_->points[i].z);
+            double u = p[a], v = p[b];
+            A(i, 0) = u; A(i, 1) = v; A(i, 2) = 1.0;
+            rhs(i) = -(u*u + v*v);
+            axis_min = std::min(axis_min, p[weak_axis]);
+        }
+        Eigen::Vector3d sol = A.colPivHouseholderQr().solve(rhs);
+        cx = -0.5 * sol[0];
+        cy = -0.5 * sol[1];
+    }
 
-    double center_u = -0.5 * alpha;
-    double center_v = -0.5 * beta;
-    double radius_sq = center_u * center_u + center_v * center_v - gamma;
-    if (radius_sq < 0.0) radius_sq = 0.0;
-    double radius = std::sqrt(radius_sq);
+    std::vector<double> distances;
+    distances.reserve(n);
+    for (size_t i = 0; i < n; ++i) {
+        Eigen::Vector3d p(points_->points[i].x, points_->points[i].y, points_->points[i].z);
+        double du = p[a] - cx, dv = p[b] - cy;
+        distances.push_back(std::sqrt(du*du + dv*dv));
+    }
+
+    auto radius_values = distances;
+    const size_t radius_mid = radius_values.size() / 2;
+    std::nth_element(radius_values.begin(), radius_values.begin() + radius_mid, radius_values.end());
+    double radius_median = radius_values[radius_mid];
+
+    std::vector<double> deviations;
+    deviations.reserve(distances.size());
+    for (double distance : distances) deviations.push_back(std::abs(distance - radius_median));
+    const size_t dev_mid = deviations.size() / 2;
+    std::nth_element(deviations.begin(), deviations.begin() + dev_mid, deviations.end());
+    double mad = deviations[dev_mid];
+
+    double radius = 0.0;
+    size_t radius_count = 0;
+    double radius_limit = radius_median + std::max(0.05, 2.5 * mad);
+    for (double distance : distances) {
+        if (std::abs(distance - radius_median) <= radius_limit - radius_median) {
+            radius += distance;
+            ++radius_count;
+        }
+    }
+    if (radius_count == 0) {
+        for (double distance : distances) radius += distance;
+        radius_count = distances.size();
+    }
+    radius /= static_cast<double>(radius_count);
 
     Eigen::Vector3d p1(0.0, 0.0, 0.0);
     p1[weak_axis] = axis_min;
-    p1[a] = center_u;
-    p1[b] = center_v;
+    p1[a] = cx;
+    p1[b] = cy;
 
-    Eigen::Vector3d axis(0.0, 0.0, 0.0);
-    axis[weak_axis] = 1.0;
+    Eigen::Vector3d axisVec(0.0, 0.0, 0.0);
+    axisVec[weak_axis] = 1.0;
 
     (*coefficients_)[0] = p1.x();
     (*coefficients_)[1] = p1.y();
     (*coefficients_)[2] = p1.z();
-    (*coefficients_)[3] = axis.x();
-    (*coefficients_)[4] = axis.y();
-    (*coefficients_)[5] = axis.z();
+    (*coefficients_)[3] = axisVec.x();
+    (*coefficients_)[4] = axisVec.y();
+    (*coefficients_)[5] = axisVec.z();
     (*coefficients_)[6] = radius;
 }
 
