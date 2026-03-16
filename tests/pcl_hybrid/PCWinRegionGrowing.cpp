@@ -36,9 +36,9 @@ bool PlaneAwareRegionGrowing::validatePoint(pcl::index_t /*initial_seed*/, pcl::
     try {
         if (_SETTINGS.contains("general") && _SETTINGS["general"].contains("angle_tolerance_deg")) {
             angle_tolerance = static_cast<float>(_SETTINGS["general"]["angle_tolerance_deg"].get<double>());
-        } else {
-            std::cout << "[Settings] general.angle_tolerance_deg missing: using default " << angle_tolerance << " deg\n";
-        }
+        } //else {
+        //    std::cout << "[Settings] general.angle_tolerance_deg missing: using default " << angle_tolerance << " deg\n";
+        //}
     } catch (const std::exception &ex) {
         std::cout << "[Settings] general.angle_tolerance_deg invalid: using default " << angle_tolerance << " deg (" << ex.what() << ")\n";
     }

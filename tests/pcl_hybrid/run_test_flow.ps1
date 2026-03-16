@@ -18,6 +18,13 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+# In PowerShell 7+, native tools writing to stderr (for warnings) can be turned
+# into terminating errors when ErrorActionPreference=Stop. We still validate
+# success via LASTEXITCODE in Run-Step, so keep stderr warnings non-fatal.
+if (Get-Variable -Name PSNativeCommandUseErrorActionPreference -ErrorAction SilentlyContinue) {
+  $PSNativeCommandUseErrorActionPreference = $false
+}
+
 function Write-Stage($msg) {
   Write-Host "`n=== $msg ===" -ForegroundColor Cyan
 }
@@ -31,7 +38,15 @@ function Assert-PathExists([string]$PathToCheck, [string]$What) {
 function Run-Step([string]$Name, [scriptblock]$Action) {
   Write-Host "[RUN] $Name" -ForegroundColor Yellow
   $global:LASTEXITCODE = 0
-  & $Action
+  $oldEap = $ErrorActionPreference
+  try {
+    # Native tools often emit warnings to stderr; treat exit code as source of truth.
+    $ErrorActionPreference = "Continue"
+    & $Action
+  }
+  finally {
+    $ErrorActionPreference = $oldEap
+  }
   if ($LASTEXITCODE -ne 0) {
     throw "Step failed with exit code ${LASTEXITCODE}: $Name"
   }

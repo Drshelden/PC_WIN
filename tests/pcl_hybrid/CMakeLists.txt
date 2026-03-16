@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 project(pcl_hybrid LANGUAGES CXX)
 
-# PCL from vcpkg (1.14+) requires at least C++17.
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
